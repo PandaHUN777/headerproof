@@ -1,0 +1,34 @@
+title: "[Contribution] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for contribution plans that are not already covered by an accepted issue. For feature/detector proposals, use Ideas instead.
+  - type: textarea
+    id: change
+    attributes:
+      label: Proposed contribution
+      description: What would you like to change and why?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Intended scope
+      description: List the files/components you expect to touch and what is explicitly out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How will the change be tested?
+    validations:
+      required: true
+  - type: checkboxes
+    id: expectations
+    attributes:
+      label: Before coding
+      options:
+        - label: I will wait for maintainer scope confirmation before starting a large change.
+          required: true

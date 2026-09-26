@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions
+    url: https://github.com/TayfurYldz/headerproof/discussions/categories/q-a
+    about: Ask how to install, configure, or use HeaderProof.
+  - name: Feature and detector ideas
+    url: https://github.com/TayfurYldz/headerproof/discussions/categories/ideas
+    about: Discuss an idea and its proof/safety boundary before implementation.
+  - name: Security vulnerability in HeaderProof
+    url: https://github.com/TayfurYldz/headerproof/security/advisories/new
+    about: Privately report a vulnerability in HeaderProof itself. Do not post third-party target findings.

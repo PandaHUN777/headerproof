@@ -1,0 +1,42 @@
+title: "[Idea] "
+labels: ["needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are design conversations, not implementation assignments. A maintainer may convert an accepted, scoped proposal into an issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete user or evidence-quality problem should HeaderProof solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Describe the behavior, not just an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Evidence and false-positive boundary
+      description: What observation would justify a finding, and what must not be promoted?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and scope
+      description: Describe request methods, side effects, or authorization considerations if the idea changes active scanning.
+    validations:
+      required: false
+  - type: checkboxes
+    id: expectations
+    attributes:
+      label: Contribution
+      options:
+        - label: I understand an idea is not accepted work until a maintainer scopes it into an issue.
+          required: true

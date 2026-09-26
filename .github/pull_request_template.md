@@ -2,6 +2,10 @@
 
 Describe the change and why it is needed.
 
+## Scope
+
+Link the accepted issue or Discussion when one exists. State what this PR changes and what is intentionally out of scope.
+
 ## Validation
 
 ```bash

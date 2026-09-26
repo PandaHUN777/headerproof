@@ -1,8 +1,39 @@
 name: Bug report
-description: Report a scanner bug with sanitized evidence.
+description: Report a reproducible HeaderProof defect with sanitized evidence.
 title: "[Bug]: "
-labels: ["bug"]
+labels: ["bug", "needs triage"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Use Discussions → Q&A for usage questions and Discussions → Ideas for feature requests.
+        For a security vulnerability in HeaderProof itself, use private vulnerability reporting instead of this form.
+  - type: input
+    id: version
+    attributes:
+      label: HeaderProof version
+      description: Release version or commit SHA.
+      placeholder: v1.5.0 or 5b7fe28
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation
+      options:
+        - Release binary
+        - Docker / GHCR
+        - Python source / virtualenv
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: Ubuntu 24.04 amd64, Windows 11 amd64, macOS arm64
+    validations:
+      required: true
   - type: textarea
     id: summary
     attributes:
@@ -11,21 +42,13 @@ body:
     validations:
       required: true
   - type: textarea
-    id: command
+    id: reproduce
     attributes:
-      label: Command
-      description: Include the exact command, with target-sensitive paths or URLs sanitized.
+      label: Minimal reproduction
+      description: Include the smallest deterministic reproduction. Prefer a local fixture over a live target.
       render: bash
     validations:
       required: true
-  - type: textarea
-    id: input
-    attributes:
-      label: Sanitized input
-      description: Provide a minimal input sample that reproduces the issue.
-      render: text
-    validations:
-      required: false
   - type: textarea
     id: expected
     attributes:
@@ -38,10 +61,20 @@ body:
       label: Actual behavior
     validations:
       required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Relevant stdout/stderr or JSONL/SARIF excerpt. Remove target-sensitive data.
+      render: text
+    validations:
+      required: false
   - type: checkboxes
     id: safety
     attributes:
       label: Safety checklist
       options:
         - label: I removed secrets, cookies, tokens, private URLs, and third-party exploit evidence.
+          required: true
+        - label: This report is about HeaderProof behavior, not a vulnerability I found in a third-party target.
           required: true

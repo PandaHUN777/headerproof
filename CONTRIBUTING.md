@@ -2,6 +2,20 @@
 
 HeaderProof accepts changes that reduce false positives, improve evidence quality, or make verified output easier to consume.
 
+## Before you start
+
+- Pick an open `good first issue` or `help wanted` task when possible and comment before starting. A maintainer will confirm that the scope is still current.
+- Use Discussions → Ideas for new features or detector behavior. Use Discussions → General for a larger contribution plan that is not already scoped.
+- Keep pull requests focused. Do not bundle unrelated cleanup, refactors, and feature work.
+- New specialized active-scanning primitives require design agreement before implementation.
+- Read [the maintainer policy](docs/MAINTAINERS.md) for intake, review, labels, and release expectations.
+
+## Pull requests
+
+Link the accepted issue or Discussion when one exists. Explain the behavior change, the proof/safety boundary when detection changes, and the validation you ran. Maintainers may ask for a large change to be split into independently reviewable commits or pull requests.
+
+A green CI run is necessary but not sufficient for merge: the change must preserve conservative evidence gates, remain maintainable, and match the accepted scope.
+
 ## Add or change a detector template
 
 Detector definitions belong in the separately distributed `headerproof-templates` set. HeaderProof supports two template paths:

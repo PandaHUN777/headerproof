@@ -1,0 +1,23 @@
+title: "[Showcase] "
+body:
+  - type: textarea
+    id: use
+    attributes:
+      label: What did you build or verify?
+      description: Share a HeaderProof integration, local lab, template, CI workflow, or other project-related work.
+    validations:
+      required: true
+  - type: textarea
+    id: learnings
+    attributes:
+      label: What did you learn?
+      description: Mention useful limitations, false-positive lessons, or integration details.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Publication safety
+      options:
+        - label: This post contains no secrets, private target data, or undisclosed third-party vulnerability details.
+          required: true

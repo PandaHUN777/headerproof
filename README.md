@@ -34,6 +34,6 @@ Exit codes: `0` no verified finding, `1` verified finding present, `2` scan erro
 | Corsy | CORS-focused testing |
 | ffuf | Web fuzzing and content discovery |
 
-Docs: [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Project proof](docs/PROJECT_PROOF.md) · [Discovery](docs/DISCOVERY.md) · [Configuration](docs/CONFIGURATION.md) · [PyPI](docs/PYPI.md) · [Roadmap](docs/ROADMAP.md) · [Contributing](CONTRIBUTING.md)
+Docs: [Architecture](docs/ARCHITECTURE.md) · [Testing](docs/TESTING.md) · [Project proof](docs/PROJECT_PROOF.md) · [Discovery](docs/DISCOVERY.md) · [Configuration](docs/CONFIGURATION.md) · [PyPI](docs/PYPI.md) · [Roadmap](docs/ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Community](https://github.com/TayfurYldz/headerproof/discussions)
 
 Python 3.10+ · MIT · authorized testing only.

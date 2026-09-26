@@ -1,0 +1,46 @@
+# Maintainer policy
+
+HeaderProof optimizes for trustworthy evidence and low false-positive cost, not detector count.
+
+## Intake
+
+- Bugs need a minimal sanitized reproduction before they are considered actionable.
+- New ideas start in Discussions unless an existing issue already defines the scope.
+- A Discussion becomes an issue only when the expected behavior, acceptance criteria, safety boundary, and maintenance owner are clear.
+- Security vulnerabilities in HeaderProof itself use private vulnerability reporting.
+
+## Contributor work
+
+- `good first issue` means the task is bounded, has clear acceptance criteria, and should not require an architecture decision.
+- `help wanted` means the task is accepted and useful but may require deeper project context.
+- Contributors should comment before starting an issue. A maintainer confirms the scope before substantial work begins.
+- An assignment is coordination, not ownership forever. If progress stops, maintainers may reopen the task for others after checking in.
+- Unsolicited large rewrites or new active scanning primitives may be declined even when technically correct; discuss them first.
+
+## Review bar
+
+A merge should leave the project easier to trust than before.
+
+1. Behavior matches the issue or accepted Discussion scope.
+2. New detection behavior has deterministic tests and preserves conservative proof gates.
+3. Active requests remain bounded and safe by default.
+4. User-facing behavior is documented when it changes.
+5. CI is green and no unrelated cleanup is bundled into the change.
+6. Security-sensitive evidence contains no live third-party secrets or exploit material.
+
+Maintainers may ask for a PR to be split when independent changes can be reviewed and reverted separately.
+
+## Labels
+
+- `good first issue`: newcomer-sized and ready to implement.
+- `help wanted`: accepted work where outside contribution is explicitly welcome.
+- `bug`: reproducible defect in HeaderProof.
+- `documentation`: documentation-only or documentation-led work.
+- `enhancement`: accepted improvement; it does not by itself mean the task is ready for implementation.
+- `needs triage`: maintainer has not yet confirmed scope or priority.
+
+Labels describe project state; they are not a promise that every proposed change will be merged.
+
+## Releases
+
+Changes reach a release only after they are present on `main`, pass the project CI contract, and have release notes appropriate to their user impact. Release tags are not used as a substitute for merging maintained source into `main`.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a maintainer-governed contributor intake: Discussions, structured discussion forms, scoped issue routing, private vulnerability reporting, contributor/maintainer policy, and a curated `good first issue` / `help wanted` queue.
+
 - Enforced the Phase 2 template boundary at finding construction: undeclared signal types and detector/template check mismatches now fail closed instead of becoming promotable findings.
 - Isolated PyPI Trusted Publishing into a dedicated OIDC workflow with exact-tag builds, version verification, and manual publication support for existing releases.
 

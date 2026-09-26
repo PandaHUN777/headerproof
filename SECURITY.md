@@ -2,18 +2,20 @@
 
 HeaderProof is intended for authorized security testing only.
 
-## Reporting Issues
+## Vulnerabilities in HeaderProof
 
-If you find a bug in the scanner itself, open a GitHub issue with:
+If you find a vulnerability in HeaderProof itself, use GitHub's private vulnerability reporting for this repository. Do not open a public issue before coordinated disclosure.
 
-- version or commit hash
-- command used
-- sanitized input sample
-- expected behavior
-- actual behavior
+Include the affected version or commit, impact, minimal reproduction, and any proposed mitigation. Remove third-party secrets and target data.
 
-Do not include live target secrets, credentials, cookies, private URLs, or exploit evidence from third-party systems.
+## Scanner bugs
 
-## Testing Boundaries
+For non-security defects in HeaderProof, use the public Bug report form with a deterministic, sanitized reproduction.
 
-Only scan assets where you have explicit permission. The tool is designed to use low-impact requests, but operators remain responsible for scope, rate, and program policy.
+## Third-party findings
+
+Do not use HeaderProof issues, pull requests, or Discussions to disclose vulnerabilities in third-party systems. Report those findings through the target's authorized disclosure process.
+
+## Testing boundaries
+
+Only scan assets where you have explicit permission. HeaderProof uses bounded, low-impact requests by design, but operators remain responsible for scope, rate, and program policy.

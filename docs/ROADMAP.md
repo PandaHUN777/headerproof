@@ -86,7 +86,7 @@ Remaining external evidence:
 Implemented and verified:
 - GitHub topics include appsec, recon, red-team, web-security, security-scanner, and detector-specific discovery terms.
 - The repository description is factual and avoids unmeasured speed/accuracy/noise claims.
-- Exactly eight scoped `good first issue` tickets are open, satisfying the 8–10 issue onboarding window; each has a bounded contributor task.
+- The contributor queue is curated by implementation depth rather than a numeric quota: newcomer-sized work uses `good first issue`, while accepted tasks requiring deeper project context use `help wanted`. The initial backlog was re-triaged accordingly.
 - v1.4.0 and v1.4.1 are published releases and their live GitHub release bodies match the repository release notes.
 - `docs/DISCOVERY.md` documents the discovery metadata, starter-backlog contract, release-note rule, and the external-distribution boundary.
 

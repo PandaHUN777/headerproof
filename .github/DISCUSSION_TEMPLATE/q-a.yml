@@ -1,0 +1,30 @@
+title: "[Question] "
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Describe the intended HeaderProof workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Include sanitized commands or output when useful.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: HeaderProof version
+      placeholder: v1.5.0 or commit SHA
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I will not post credentials, private URLs, or third-party exploit evidence.
+          required: true

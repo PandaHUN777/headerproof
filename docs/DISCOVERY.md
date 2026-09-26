@@ -10,18 +10,19 @@ The repository description states what HeaderProof scans and does not use speed,
 
 ## Starter backlog
 
-The project maintains 8–10 open `good first issue` tickets as the onboarding window. Starter tickets must:
+The project maintains a small curated contributor queue rather than a numeric issue quota. Use `good first issue` only when a newcomer can complete the task without an architecture decision; use `help wanted` for accepted work that needs deeper project context. Contributor tickets must:
 - have one bounded outcome;
 - include acceptance criteria or a concrete expected artifact;
 - avoid requiring access to private targets or secrets;
+- be reclassified when the actual implementation depth no longer matches the label;
 - preserve the evidence-gate and false-positive-first design;
 - remain open until a contributor actually completes the work.
 
-The current starter backlog covers configuration validation, template documentation, SARIF validation, OOB documentation, cache regression coverage, evidence-schema consumption, release-binary smoke testing, and deterministic demo generation.
+The current contributor backlog covers configuration validation, template documentation, SARIF validation, OOB documentation, cache regression coverage, evidence-schema consumption, release-binary smoke testing, and deterministic demo generation; difficulty labels are maintained independently of topic.
 
 ## Releases
 
-Release notes describe shipped behavior and measured boundaries rather than roadmap promises. v1.4.0 and v1.4.1 are published GitHub releases, with matching repository release notes under `docs/releases/`.
+Release notes describe shipped behavior and measured boundaries rather than roadmap promises. Published releases through v1.5.0 have matching repository release notes under `docs/releases/`.
 
 ## External lists
 
