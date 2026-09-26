@@ -63,10 +63,12 @@ Phase 4 is complete. The release binary is the primary installation path; PyPI i
 - Contract regression tests cover SARIF stream separation and exit-code precedence.
 - `docs/CI.md` documents shell/CI consumption without coupling policy to the scanner.
 
-#### Phase 5B — Action and evidence compatibility — next
-- Audit and harden the independently versioned evidence schema compatibility contract.
-- Validate the separately versioned HeaderProof GitHub Action end to end against the published installer/CLI.
-- Keep action versioning independent from the scanner release lifecycle.
+#### Phase 5B — Action and evidence compatibility — complete
+- Published evidence schemas are hash-locked in `schemas/manifest.json`; tests bind the runtime `SCHEMA_VERSION` to the manifest and reject in-place edits or untracked schema files.
+- Evidence schema v1.2 is unchanged across HeaderProof v1.4.0 and v1.4.1, proving scanner releases can advance independently from the evidence contract.
+- HeaderProof Action v1.0.0 is independently versioned with the stable `v1` major tag.
+- Action E2E CI installs the published HeaderProof v1.4.1 binary and verifies controlled no-finding (`0`) and reproduced-finding (`1`) SARIF paths.
+- The action preserves scan error (`2`) and other non-zero process exits instead of silently converting them to success.
 
 ### Phase 6 — Project proof and contributor path
 Implemented:

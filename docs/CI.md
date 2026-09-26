@@ -24,3 +24,7 @@ Operational scan messages remain on stderr. `-silent` suppresses operational out
 | 130 | Interrupted by the operator |
 
 Exit code 1 is a finding result, not a scanner failure. CI wrappers should decide whether findings fail a workflow based on their own policy.
+
+## GitHub Action
+
+The independently versioned action is available as `TayfurYldz/headerproof-action@v1`. Its `version` input selects the scanner release separately; by default it installs the latest published HeaderProof binary. Set `fail-on-findings: "false"` to retain exit-code `1` as an action output without failing the workflow step.

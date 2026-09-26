@@ -1,0 +1,9 @@
+{
+  "current": "1.2",
+  "schemas": {
+    "1.2": {
+      "file": "evidence-v1.2.schema.json",
+      "sha256": "ab6e875603fd7706c30bbc3f2a85258ca2059ad7b0a18cf3fc1fae59b011d265"
+    }
+  }
+}
