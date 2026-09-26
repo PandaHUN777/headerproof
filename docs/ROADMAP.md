@@ -55,14 +55,18 @@ Completed and release-verified:
 Phase 4 is complete. The release binary is the primary installation path; PyPI is intentionally non-blocking.
 
 ### Phase 5 — CI consumption
-Implemented:
-- stdout findings / stderr operational logs.
-- SARIF 2.1.0 export.
-- Exit codes: no finding 0, finding 1, scan error 2.
-- Independently versioned evidence schema compatibility policy.
 
-Remaining:
-- Publish the separately versioned headerproof-action repository. This is outside work scoped only to this repository.
+#### Phase 5A — CLI/CI contract — complete
+- Findings/machine output stay on stdout; operational logs stay on stderr.
+- SARIF 2.1.0 export is available on stdout and as `.sarif` output.
+- Stable exit codes: no finding 0, finding 1, scan error 2; operator interrupt 130.
+- Contract regression tests cover SARIF stream separation and exit-code precedence.
+- `docs/CI.md` documents shell/CI consumption without coupling policy to the scanner.
+
+#### Phase 5B — Action and evidence compatibility — next
+- Audit and harden the independently versioned evidence schema compatibility contract.
+- Validate the separately versioned HeaderProof GitHub Action end to end against the published installer/CLI.
+- Keep action versioning independent from the scanner release lifecycle.
 
 ### Phase 6 — Project proof and contributor path
 Implemented:
