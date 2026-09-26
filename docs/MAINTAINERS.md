@@ -48,8 +48,11 @@ If the accepted change needs maintainer-only follow-up, keep that follow-up in a
 - `help wanted`: accepted work where outside contribution is explicitly welcome.
 - `bug`: reproducible defect in HeaderProof.
 - `documentation`: documentation-only or documentation-led work.
+- `tests`: test coverage, fixtures, or validation-only work.
+- `community`: an external community contribution; it does not imply acceptance or merge readiness.
 - `enhancement`: accepted improvement; it does not by itself mean the task is ready for implementation.
 - `needs triage`: maintainer has not yet confirmed scope or priority.
+- `dependencies`, `ci`, and `release`: dependency, workflow, and distribution maintenance.
 
 Labels describe project state; they are not a promise that every proposed change will be merged.
 

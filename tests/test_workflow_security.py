@@ -53,3 +53,19 @@ def test_ci_release_tags_exercise_container_build_without_publishing() -> None:
     assert "name: Verify cosign" in text
     assert "linux/amd64,linux/arm64" in text
     assert "|| 'linux/amd64'" in text
+
+
+def test_release_artifacts_and_container_get_github_provenance() -> None:
+    text = (WORKFLOWS / "release.yml").read_text()
+    assert "name: Attest release binaries and Python distributions" in text
+    assert "name: Attest container provenance" in text
+    assert text.count("uses: actions/attest@") >= 2
+    assert "attestations: write" in text
+    assert "artifact-metadata: write" in text
+    assert "push-to-registry: true" in text
+
+
+def test_ci_uses_current_unified_attestation_action() -> None:
+    text = (WORKFLOWS / "ci.yml").read_text()
+    assert "uses: actions/attest@" in text
+    assert "actions/attest-build-provenance@" not in text

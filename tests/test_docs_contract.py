@@ -13,6 +13,9 @@ MAINTAINERS = ROOT / "docs" / "MAINTAINERS.md"
 SUPPORT = ROOT / "SUPPORT.md"
 SECURITY = ROOT / "SECURITY.md"
 CODE_OF_CONDUCT = ROOT / "CODE_OF_CONDUCT.md"
+VERIFYING_RELEASES = ROOT / "docs" / "VERIFYING_RELEASES.md"
+RELEASING = ROOT / "docs" / "RELEASING.md"
+DOC_INDEX = ROOT / "docs" / "README.md"
 
 
 def test_readme_stays_short_and_keeps_factual_tool_roles() -> None:
@@ -82,3 +85,29 @@ def test_community_contract_routes_work_and_security_to_the_right_channels() -> 
     assert "private vulnerability reporting" in security
     assert "third-party systems" in security
     assert "Critique code, evidence, and design decisions rather than people" in conduct
+
+
+def test_release_verification_and_maintainer_release_contract_are_documented() -> None:
+    verifying = VERIFYING_RELEASES.read_text()
+    releasing = RELEASING.read_text()
+    readme = README.read_text()
+
+    assert "gh attestation verify" in verifying
+    assert "cosign verify-blob" in verifying
+    assert "--signer-workflow" in verifying
+    assert "Current release workflows create GitHub artifact attestations" in verifying
+    assert "Required CI checks on the release commit must be green" in releasing
+    assert "issue a patch release instead of replacing assets" in releasing
+    assert "[Documentation index](docs/README.md)" in readme
+
+    index = DOC_INDEX.read_text()
+    for expected in (
+        "Configuration",
+        "CI integration",
+        "Verifying releases",
+        "Contributing",
+        "Maintainer policy",
+        "Release process",
+        "Security policy",
+    ):
+        assert expected in index

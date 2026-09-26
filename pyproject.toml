@@ -36,8 +36,10 @@ test = [
 
 [project.urls]
 Homepage = "https://github.com/TayfurYldz/headerproof"
+Documentation = "https://github.com/TayfurYldz/headerproof/blob/main/docs/README.md"
 Repository = "https://github.com/TayfurYldz/headerproof"
 Issues = "https://github.com/TayfurYldz/headerproof/issues"
+Security = "https://github.com/TayfurYldz/headerproof/security/policy"
 Changelog = "https://github.com/TayfurYldz/headerproof/blob/main/CHANGELOG.md"
 
 [project.scripts]
