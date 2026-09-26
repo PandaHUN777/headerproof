@@ -2,6 +2,15 @@ name: HeaderProof CI
 
 on:
   workflow_dispatch:
+    inputs:
+      cloudflare_fixture:
+        description: Controlled Cloudflare fixture base URL
+        required: false
+        type: string
+      fastly_fixture:
+        description: Controlled Fastly fixture base URL
+        required: false
+        type: string
   push:
     branches: [main]
     tags: ["v*"]
@@ -67,11 +76,15 @@ jobs:
         env:
           HEADERPROOF_VARNISH_FIXTURE: http://127.0.0.1:16080
           HEADERPROOF_NGINX_FIXTURE: http://127.0.0.1:17080
+          HEADERPROOF_CLOUDFLARE_FIXTURE: ${{ inputs.cloudflare_fixture }}
+          HEADERPROOF_FASTLY_FIXTURE: ${{ inputs.fastly_fixture }}
         run: python -m pytest -q tests/integration/test_cache_fixtures.py
       - name: Measure precision and recall
         env:
           HEADERPROOF_VARNISH_FIXTURE: http://127.0.0.1:16080
           HEADERPROOF_NGINX_FIXTURE: http://127.0.0.1:17080
+          HEADERPROOF_CLOUDFLARE_FIXTURE: ${{ inputs.cloudflare_fixture }}
+          HEADERPROOF_FASTLY_FIXTURE: ${{ inputs.fastly_fixture }}
         run: python tests/integration/measure_precision.py | tee cache-metrics.json
       - uses: actions/upload-artifact@v4
         with:
@@ -80,8 +93,31 @@ jobs:
       - if: always()
         run: docker compose -f tests/integration/cache-fixtures/docker-compose.yml down -v
 
+  known-vulnerable-lab:
+    name: DVWA false-negative measurement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install --upgrade pip ".[test]"
+      - name: Start official DVWA fixture
+        run: docker compose -f tests/integration/dvwa-fixture/docker-compose.yml up -d
+      - name: Measure known-vulnerable recall
+        env:
+          HEADERPROOF_DVWA_FIXTURE: http://127.0.0.1:18080
+        run: python tests/integration/measure_dvwa.py | tee dvwa-metrics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dvwa-metrics
+          path: dvwa-metrics.json
+      - if: always()
+        run: docker compose -f tests/integration/dvwa-fixture/docker-compose.yml down -v
+
   package:
-    needs: [test, cache-fixtures]
+    needs: [test, cache-fixtures, known-vulnerable-lab]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

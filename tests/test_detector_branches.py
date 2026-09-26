@@ -118,16 +118,34 @@ def test_cache_utility_branch_matrix() -> None:
             "x-cache-hits=0",
             "x-cache=HIT",
             "x-cache=HIT, MISS",
+            "x-cache-hits=0, 3",
             "cf-cache-status=DYNAMIC",
+            "cf-cache-status=STALE",
+            "cf-cache-status=UPDATING",
+            "cf-cache-status=REVALIDATED",
             "cache-status=revalidated",
             "unknown=hit",
         ]
     )
-    assert markers == ["age=4", "x-cache-hits=2", "x-cache=HIT", "cache-status=revalidated"]
+    assert markers == [
+        "age=4",
+        "x-cache-hits=2",
+        "x-cache=HIT",
+        "x-cache=HIT, MISS",
+        "x-cache-hits=0, 3",
+        "cf-cache-status=STALE",
+        "cf-cache-status=UPDATING",
+        "cf-cache-status=REVALIDATED",
+        "cache-status=revalidated",
+    ]
     assert header_int(None, "age") == 0
     assert header_int(snap({"Age": "none"}), "age") == 0
     assert has_cache_hit_header(None) is False
     assert has_cache_hit_header(snap({"X-Cache": "HIT"})) is True
+    assert has_cache_hit_header(snap({"X-Cache": "HIT, MISS"})) is True
+    assert has_cache_hit_header(snap({"CF-Cache-Status": "STALE"})) is True
+    assert has_cache_hit_header(snap({"CF-Cache-Status": "UPDATING"})) is True
+    assert has_cache_hit_header(snap({"CF-Cache-Status": "DYNAMIC"})) is False
     assert cache_hit_progressed(None, None, None) is False
     assert cache_hit_progressed(snap({"Age": "0"}), snap({"Age": "0"}), snap({"X-Cache": "HIT"})) is True
     assert cache_hit_progressed(snap({"Age": "1"}), snap({"Age": "2"}), snap({"Age": "3"})) is True

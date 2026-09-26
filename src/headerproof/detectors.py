@@ -71,10 +71,21 @@ def shared_cache_hit_markers(indicators: list[str]) -> list[str]:
             if match and int(match.group(0)) > 0:
                 markers.append(indicator)
         elif name_l == "x-cache-hits":
-            match = re.search(r"\d+", value_l)
-            if match and int(match.group(0)) > 0:
+            if any(int(item) > 0 for item in re.findall(r"\d+", value_l)):
                 markers.append(indicator)
-        elif name_l in {"x-cache", "cf-cache-status", "cache-status", "akamai-cache-status", "server-timing"}:
+        elif name_l == "x-cache":
+            # Fastly can report multiple cache nodes (for example "HIT, MISS"
+            # with shielding). Any HIT component means a cache satisfied at least
+            # one leg of the request path.
+            if re.search(r"\bhit(?:-[a-z0-9_-]+)?\b", value_l):
+                markers.append(indicator)
+        elif name_l == "cf-cache-status":
+            # Cloudflare documents HIT, STALE, UPDATING and REVALIDATED as
+            # responses served from, or validated through, cache. MISS/BYPASS/
+            # DYNAMIC/EXPIRED are deliberately not promoted as hit evidence.
+            if value_l.strip() in {"hit", "stale", "updating", "revalidated"}:
+                markers.append(indicator)
+        elif name_l in {"cache-status", "akamai-cache-status", "server-timing"}:
             has_hit = re.search(r"\b(hit|cached|revalidated)\b", value_l)
             has_miss = re.search(r"\b(miss|bypass|dynamic|uncacheable|expired)\b", value_l)
             if has_hit and not has_miss:
@@ -92,8 +103,7 @@ def header_int(snap: HttpSnapshot | None, name: str) -> int:
 def has_cache_hit_header(snap: HttpSnapshot | None) -> bool:
     if snap is None:
         return False
-    indicators = " ".join(shared_cache_hit_markers(cache_indicators(snap))).lower()
-    return bool(re.search(r"\b(hit|cached|revalidated)\b", indicators))
+    return bool(shared_cache_hit_markers(cache_indicators(snap)))
 
 
 def cache_hit_progressed(
