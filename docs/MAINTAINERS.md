@@ -27,6 +27,12 @@ A merge should leave the project easier to trust than before.
 4. User-facing behavior is documented when it changes.
 5. CI is green and no unrelated cleanup is bundled into the change.
 6. Security-sensitive evidence contains no live third-party secrets or exploit material.
+7. Claims in the PR description match the actual diff and reproducible validation evidence.
+8. The contributor can explain the submitted behavior and has not substituted generated boilerplate, fabricated output, or unrelated filler for project-specific reasoning.
+
+Do not infer authorship quality from writing style or from whether a contributor used AI-assisted tooling. Review the artifact: scope, reasoning, tests, evidence, and the contributor's ability to answer concrete review questions. Tool-assisted work is acceptable; unvalidated work is not.
+
+Record commit-signature status during review when useful. A GitHub `Verified` signature strengthens provenance, not correctness; it never substitutes for reviewing the exact diff and validation evidence. Do not retroactively block an in-flight contribution on a signing requirement that was not part of its accepted scope.
 
 Maintainers may ask for a PR to be split when independent changes can be reviewed and reverted separately.
 

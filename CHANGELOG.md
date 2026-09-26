@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tightened contributor review integrity: pull requests must distinguish checks actually run from suggested checks, contributors remain responsible for tool-assisted work, and maintainers review reproducible evidence rather than writing style.
 - Added structured GitHub Discussion forms for Ideas, General feedback, and Q&A so community input arrives with enough context to triage safely.
 - Pinned Docker build/runtime base images by digest and removed the unnecessary unpinned pip self-upgrade from the container build; linked private vulnerability reporting directly from the security policy.
 - Added immutable future releases, release-artifact and container provenance attestations, consumer verification guidance, a release-maintainer checklist, editor defaults, and richer package metadata for documentation and security reporting.

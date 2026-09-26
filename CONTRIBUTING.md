@@ -16,6 +16,10 @@ Link the accepted issue or Discussion when one exists. Explain the behavior chan
 
 A green CI run is necessary but not sufficient for merge: the change must preserve conservative evidence gates, remain maintainable, and match the accepted scope.
 
+Contributors remain responsible for every submitted line, regardless of which editors, generators, or AI-assisted tools were used. Be able to explain the final diff and state which validation commands you actually ran. Do not invent test results, reproduction evidence, references, or implementation claims. Generated boilerplate, unrelated filler, and changes the contributor cannot validate may be closed or sent back for revision.
+
+Signed commits that GitHub can mark `Verified` are encouraged as a provenance signal, but they do not replace code review, tests, or evidence validation. Unless branch policy explicitly says otherwise, an unsigned commit is not rejected solely for lacking the badge.
+
 Accepted external contributions retain their original commit authorship. After the first accepted contribution reaches `main`, the contributor is added to [`CONTRIBUTORS.md`](CONTRIBUTORS.md) and credited in the first release that ships the work.
 
 ## Add or change a detector template
