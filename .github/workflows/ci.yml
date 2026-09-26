@@ -1,6 +1,7 @@
 name: HeaderProof CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     tags: ["v*"]
@@ -50,8 +51,37 @@ jobs:
           --cov-branch
           --cov-fail-under=95
 
+  cache-fixtures:
+    name: Real cache fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install --upgrade pip ".[test]"
+      - name: Start Varnish and nginx caches
+        run: docker compose -f tests/integration/cache-fixtures/docker-compose.yml up -d --wait
+      - name: Verify cache matrix
+        env:
+          HEADERPROOF_VARNISH_FIXTURE: http://127.0.0.1:16080
+          HEADERPROOF_NGINX_FIXTURE: http://127.0.0.1:17080
+        run: python -m pytest -q tests/integration/test_cache_fixtures.py
+      - name: Measure precision and recall
+        env:
+          HEADERPROOF_VARNISH_FIXTURE: http://127.0.0.1:16080
+          HEADERPROOF_NGINX_FIXTURE: http://127.0.0.1:17080
+        run: python tests/integration/measure_precision.py | tee cache-metrics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cache-metrics
+          path: cache-metrics.json
+      - if: always()
+        run: docker compose -f tests/integration/cache-fixtures/docker-compose.yml down -v
+
   package:
-    needs: test
+    needs: [test, cache-fixtures]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
