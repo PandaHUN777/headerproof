@@ -18,14 +18,16 @@ RELEASING = ROOT / "docs" / "RELEASING.md"
 DOC_INDEX = ROOT / "docs" / "README.md"
 
 
-def test_readme_stays_short_and_keeps_factual_tool_roles() -> None:
+def test_readme_keeps_project_identity_and_factual_tool_roles() -> None:
     text = README.read_text()
-    assert len(text.splitlines()) <= 40
+    assert 'src="assets/headerproof-banner.png"' in text
+    assert "Evidence-first active web security scanning." in text
+    assert "[Documentation index](docs/README.md)" in text
     for row in (
-        "| HeaderProof | Header/cache proof-gated verification |",
-        "| Nuclei | General template-driven scanning |",
-        "| Corsy | CORS-focused testing |",
-        "| ffuf | Web fuzzing and content discovery |",
+        "| **HeaderProof** | Evidence-gated verification of header/cache security behavior |",
+        "| **Nuclei** | Broad template-driven vulnerability scanning |",
+        "| **Corsy** | Focused CORS testing |",
+        "| **ffuf** | Web fuzzing and content discovery |",
     ):
         assert row in text
 

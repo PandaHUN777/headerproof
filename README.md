@@ -295,6 +295,8 @@ These tools can complement each other in an authorized testing workflow.
 
 ## Documentation
 
+Start with the [Documentation index](docs/README.md) for the maintained source of truth across user, contributor, and maintainer documentation.
+
 | Resource | Description |
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | Components, data flow, and architectural invariants |
