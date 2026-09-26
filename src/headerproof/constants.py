@@ -16,47 +16,8 @@ CACHEABLE_STATUSES = {200, 203, 204, 206, 300, 301, 302, 404, 410}
 SEVERITY_ORDER = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
 CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
 PRODUCT_NAME = "HeaderProof"
-VERSION = "1.3.1"
+VERSION = "1.4.1"
 SCHEMA_VERSION = "1.2"
-BANNER = r"""
-    __  __               __          ____                   __
-   / / / /__  ____ _____/ /__  _____/ __ \________  ____  / /
-  / /_/ / _ \/ __ `/ __  / _ \/ ___/ /_/ / ___/ _ \/ __ \/ /
- / __  /  __/ /_/ / /_/ /  __/ /  / ____/ /  /  __/ /_/ /_/
-/_/ /_/\___/\__,_/\__,_/\___/_/  /_/   /_/   \___/\____(_)
-"""
-PROFILE_DEFAULTS = {
-    "fast": {
-        "timeout": 2.0,
-        "max_body": 8192,
-        "concurrency": 16,
-        "per_url_concurrency": 6,
-        "origin_mode": "single",
-        "header_probe_limit": 3,
-        "no_preflight": True,
-        "no_cache_confirm": False,
-    },
-    "balanced": {
-        "timeout": 2.5,
-        "max_body": 16384,
-        "concurrency": 12,
-        "per_url_concurrency": 4,
-        "origin_mode": "standard",
-        "header_probe_limit": 5,
-        "no_preflight": False,
-        "no_cache_confirm": False,
-    },
-    "thorough": {
-        "timeout": 3.0,
-        "max_body": 32768,
-        "concurrency": 8,
-        "per_url_concurrency": 4,
-        "origin_mode": "standard",
-        "header_probe_limit": 0,
-        "no_preflight": False,
-        "no_cache_confirm": False,
-    },
-}
 SUPPRESSED_BY_STRICT = {
     "cors_wildcard_origin",
     "csrf_cookie_samesite_missing",

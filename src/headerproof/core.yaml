@@ -1,0 +1,849 @@
+{
+  "schema_version": 1,
+  "templates": [
+    {
+      "id": "cors_arbitrary_origin_with_credentials",
+      "check": "cors",
+      "request": {
+        "kind": "origin-probe"
+      },
+      "matchers": [
+        "exact-origin-reflection",
+        "credentials-true"
+      ],
+      "extractors": [
+        "acao",
+        "acac",
+        "methods"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "exact Origin reflected",
+          "Access-Control-Allow-Credentials is true"
+        ],
+        "missing_proof": [
+          "authenticated sensitive body read is not proven by header scan"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cors_arbitrary_origin_reflection",
+      "check": "cors",
+      "request": {
+        "kind": "origin-probe"
+      },
+      "matchers": [
+        "exact-origin-reflection",
+        "credentials-false"
+      ],
+      "extractors": [
+        "acao",
+        "methods"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "exact Origin reflected in ACAO"
+        ],
+        "missing_proof": [
+          "credentials or sensitive readable data not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cors_wildcard_origin",
+      "check": "cors",
+      "request": {
+        "kind": "origin-probe"
+      },
+      "matchers": [
+        "acao-wildcard"
+      ],
+      "extractors": [
+        "acao",
+        "acac"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "wildcard ACAO observed"
+        ],
+        "missing_proof": [
+          "wildcard CORS alone is normally not reportable"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cors_cache_poisoning_candidate",
+      "check": "cache-poisoning",
+      "request": {
+        "kind": "origin-probe"
+      },
+      "matchers": [
+        "origin-reflection",
+        "cacheable",
+        "vary-origin-missing"
+      ],
+      "extractors": [
+        "acao",
+        "cache-indicators"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "reflected Origin on cacheable response",
+          "Vary: Origin missing"
+        ],
+        "missing_proof": [
+          "second-client poisoned response not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "csrf_cookie_samesite_missing",
+      "check": "csrf",
+      "request": {
+        "kind": "baseline"
+      },
+      "matchers": [
+        "cookie-samesite-missing"
+      ],
+      "extractors": [
+        "cookie-name",
+        "likely-auth"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "SameSite missing on Set-Cookie"
+        ],
+        "missing_proof": [
+          "no cross-site state-changing request or read-back proof"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "csrf_cookie_cross_site_auth",
+      "check": "csrf",
+      "request": {
+        "kind": "baseline"
+      },
+      "matchers": [
+        "auth-cookie-cross-site"
+      ],
+      "extractors": [
+        "cookie-name",
+        "secure",
+        "samesite"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "likely auth cookie permits cross-site delivery"
+        ],
+        "missing_proof": [
+          "CSRF token/origin enforcement and state change not tested"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "csrf_cookie_auth_unsafe_methods_exposed",
+      "check": "csrf",
+      "request": {
+        "kind": "preflight"
+      },
+      "matchers": [
+        "auth-cookie",
+        "unsafe-methods"
+      ],
+      "extractors": [
+        "unsafe-methods",
+        "cookie-names"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "likely auth cookie present",
+          "unsafe methods advertised"
+        ],
+        "missing_proof": [
+          "browser-delivered exploit and separate read-back not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cookie_samesite_none_without_secure",
+      "check": "csrf",
+      "request": {
+        "kind": "baseline"
+      },
+      "matchers": [
+        "samesite-none",
+        "secure-missing"
+      ],
+      "extractors": [
+        "cookie-name"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "cookie attribute hardening issue"
+        ],
+        "missing_proof": [
+          "no exploitable session or CSRF impact proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "header_poisoning_candidate",
+      "check": "header-injection",
+      "request": {
+        "kind": "header-probe"
+      },
+      "matchers": [
+        "canary-security-header"
+      ],
+      "extractors": [
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "canary reached security-relevant response header"
+        ],
+        "missing_proof": [
+          "victim-observable impact not independently proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "header_reflection_candidate",
+      "check": "header-injection",
+      "request": {
+        "kind": "header-probe"
+      },
+      "matchers": [
+        "canary-response-header",
+        "security-header-missing"
+      ],
+      "extractors": [
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "canary reached response header"
+        ],
+        "missing_proof": [
+          "plain reflection does not prove header control or splitting"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "header_based_content_spoofing",
+      "check": "content-spoofing",
+      "request": {
+        "kind": "header-probe"
+      },
+      "matchers": [
+        "canary-text-body"
+      ],
+      "extractors": [
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "header canary reached textual response body"
+        ],
+        "missing_proof": [
+          "trusted victim-visible spoofing or cache impact not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "unkeyed_header_cache_poisoning_candidate",
+      "check": "cache-poisoning",
+      "request": {
+        "kind": "header-probe"
+      },
+      "matchers": [
+        "canary-reflection",
+        "cache-indicator"
+      ],
+      "extractors": [
+        "locations",
+        "cache-indicators"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "header canary reflected",
+          "response has cache indicators"
+        ],
+        "missing_proof": [
+          "clean second-client cached response not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "query_parameter_content_reflection",
+      "check": "content-spoofing",
+      "request": {
+        "kind": "query-probe"
+      },
+      "matchers": [
+        "canary-text-body"
+      ],
+      "extractors": [
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "query canary reflected in textual body"
+        ],
+        "missing_proof": [
+          "plain reflection lacks trusted-context, cache, or script impact"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "query_parameter_header_reflection",
+      "check": "header-injection",
+      "request": {
+        "kind": "query-probe"
+      },
+      "matchers": [
+        "canary-response-header"
+      ],
+      "extractors": [
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "query canary reached response header"
+        ],
+        "missing_proof": [
+          "arbitrary header setting or response splitting not proven"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cache_poisoning_cross_request_reproduction",
+      "check": "cache-poisoning",
+      "request": {
+        "kind": "cache-state-machine"
+      },
+      "matchers": [
+        "clean-follow-up-canary",
+        "shared-cache-unconfirmed"
+      ],
+      "extractors": [
+        "state-machine-checks"
+      ],
+      "assessment": {
+        "default_state": "reproduced",
+        "gate": [
+          {
+            "op": "always",
+            "value": false
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "poison request contained canary",
+          "clean follow-up response contained canary"
+        ],
+        "missing_proof": [
+          "the complete shared-cache state-machine gate did not pass"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "cache_poisoning_shared_cache_confirmed",
+      "check": "cache-poisoning",
+      "request": {
+        "kind": "cache-state-machine"
+      },
+      "matchers": [
+        "shared-cache-confirmed"
+      ],
+      "extractors": [
+        "state-machine-checks",
+        "shared-cache-hit-markers"
+      ],
+      "assessment": {
+        "default_state": "reproduced",
+        "gate": [
+          {
+            "op": "status_recorded"
+          },
+          {
+            "op": "truthy",
+            "path": "evidence.shared_cache_confirmed"
+          },
+          {
+            "op": "all_true",
+            "path": "evidence.state_machine_checks"
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "poison request contained canary",
+          "clean follow-up response contained canary"
+        ],
+        "missing_proof": [
+          "the complete shared-cache state-machine gate did not pass"
+        ],
+        "passed_state": "cross_request_confirmed",
+        "passed_reasons": [
+          "poison request contained canary",
+          "clean follow-up response contained canary",
+          "all cache-state requests completed",
+          "clean victim response included shared-cache progression evidence"
+        ],
+        "passed_missing_proof": [
+          "real victim impact remains unverified; validate on an authorized low-traffic path"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "response_splitting_crlf_candidate",
+      "check": "header-injection",
+      "request": {
+        "kind": "crlf-query-probe"
+      },
+      "matchers": [
+        "canary-reflection"
+      ],
+      "extractors": [
+        "injected-header-values",
+        "locations"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "gate": [
+          {
+            "op": "status_recorded"
+          },
+          {
+            "op": "truthy",
+            "path": "evidence.injected_header_seen"
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          }
+        },
+        "reasons": [
+          "CRLF canary reflected but parsed injected header not observed"
+        ],
+        "missing_proof": [
+          "parsed arbitrary header not proven"
+        ],
+        "passed_state": "reproduced",
+        "passed_reasons": [
+          "CRLF probe produced a parsed response header"
+        ],
+        "passed_missing_proof": [
+          "real victim impact remains unverified"
+        ]
+      },
+      "verification": {
+        "objective": "Validate the technical observation independently.",
+        "automated_checks": [
+          "Record the exact request and response evidence."
+        ],
+        "manual_confirmation": [
+          "Repeat on an authorized target with independent confirmation."
+        ],
+        "report_gate": "Require independent technical and impact validation before reporting."
+      }
+    },
+    {
+      "id": "blind_header_oob_confirmed",
+      "check": "header-injection",
+      "request": {
+        "kind": "header-oob-probe"
+      },
+      "matchers": [
+        "oob-callback-observed"
+      ],
+      "extractors": [
+        "protocols",
+        "event-count"
+      ],
+      "assessment": {
+        "default_state": "observed",
+        "passed_state": "cross_request_confirmed",
+        "gate": [
+          {
+            "op": "status_recorded"
+          },
+          {
+            "op": "truthy",
+            "path": "evidence.oob_confirmed"
+          }
+        ],
+        "gate_checks": {
+          "response_recorded": {
+            "op": "status_recorded"
+          },
+          "oob_callback_observed": {
+            "op": "truthy",
+            "path": "evidence.oob_confirmed"
+          }
+        },
+        "reasons": [
+          "out-of-band callback not observed"
+        ],
+        "missing_proof": [
+          "independent callback evidence is required"
+        ],
+        "passed_reasons": [
+          "target request was recorded",
+          "out-of-band callback was observed"
+        ],
+        "passed_missing_proof": [
+          "application impact remains unverified"
+        ]
+      },
+      "verification": {
+        "objective": "Confirm backend interaction using an independent callback channel.",
+        "automated_checks": [
+          "Correlate a unique token with the tested request."
+        ],
+        "manual_confirmation": [
+          "Repeat with a fresh token and verify attribution."
+        ],
+        "report_gate": "Require a callback uniquely attributable to the tested request."
+      }
+    }
+  ]
+}

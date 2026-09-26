@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .constants import PRODUCT_NAME, VERSION
+from .constants import PRODUCT_NAME, SCHEMA_VERSION, VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -48,29 +48,31 @@ def current_git_commit() -> str:
 
 def scan_config(args: argparse.Namespace) -> dict[str, Any]:
     return {
-        "profile": args.profile,
         "checks": sorted(args.enabled_checks),
         "concurrency": args.concurrency,
         "per_url_concurrency": args.per_url_concurrency,
+        "rate_limit_per_host": args.rate_limit,
         "request_timeout_seconds": args.timeout,
         "url_budget_seconds": args.url_timeout,
         "max_body_bytes": args.max_body,
-        "origin_mode": args.origin_mode,
-        "custom_origins": list(args.origin),
-        "custom_headers_count": len(args.header),
         "header_probe_limit": args.header_probe_limit,
+        "custom_origins_count": len(getattr(args, "origin", [])),
+        "custom_probe_headers_count": len(getattr(args, "header", [])),
+        "request_headers_count": len(getattr(args, "request_headers", {})),
+        "config_file_loaded": bool(getattr(args, "config_path", "")),
         "preflight_enabled": not args.no_preflight,
         "cache_confirmation_enabled": not args.no_cache_confirm,
         "follow_redirects": args.follow_redirects,
         "save_body_samples": args.save_body_samples,
         "fp_mode": args.fp_mode,
+        "severity_filter": sorted(args.severity_filter),
         "live_alerts": not args.no_live_alerts,
     }
 
 
-def build_metadata(args: argparse.Namespace, input_path: Path, url_count: int) -> dict[str, Any]:
+def build_metadata(args: argparse.Namespace, input_path: str | Path, url_count: int) -> dict[str, Any]:
     return {
-        "schema_version": "1.2",
+        "schema_version": SCHEMA_VERSION,
         "run_id": uuid.uuid4().hex,
         "tool": PRODUCT_NAME,
         "version": VERSION,

@@ -12,10 +12,9 @@ evidence/
 *.tar.gz
 *.zip
 .env
-.env.*
-!.env.example
 .venv/
 venv/
+dist-bin/
 
 # Local IDE / agent workspaces
 .idea/

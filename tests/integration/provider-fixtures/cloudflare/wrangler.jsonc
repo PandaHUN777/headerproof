@@ -1,0 +1,6 @@
+{
+  "name": "headerproof-phase3-fixture",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-26",
+  "cache": { "enabled": true }
+}

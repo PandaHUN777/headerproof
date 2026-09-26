@@ -33,24 +33,29 @@ def main() -> int:
             input_file = tmp / "urls.txt"
             out_dir = tmp / "evidence"
             input_file.write_text(f"http://127.0.0.1:{server.server_port}/smoke\n")
+            env = dict(__import__("os").environ)
+            env["XDG_STATE_HOME"] = str(tmp / "state")
             completed = subprocess.run(
                 [
                     "headerproof",
-                    "-i",
+                    "-l",
                     str(input_file),
-                    "--concurrency",
+                    "-c",
                     "1",
-                    "--quiet",
-                    "--out-dir",
-                    str(out_dir),
+                    "-silent",
                 ],
                 check=False,
                 capture_output=True,
                 text=True,
                 timeout=20,
+                env=env,
             )
             if completed.returncode != 0:
                 raise RuntimeError(f"installed scan failed: {completed.stderr or completed.stdout}")
+            run_dirs = sorted((tmp / "state" / "headerproof" / "runs").glob("headerproof-*"))
+            if len(run_dirs) != 1:
+                raise RuntimeError(f"expected one evidence run, got {len(run_dirs)}")
+            out_dir = run_dirs[0]
             result = json.loads((out_dir / "results.jsonl").read_text().splitlines()[0])
             if result["status"] != "scanned" or not result["probes"]:
                 raise RuntimeError("installed scan did not produce a completed result with probes")

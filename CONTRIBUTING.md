@@ -1,20 +1,58 @@
 # Contributing
 
-Contributions should preserve the scanner's current operating model:
+HeaderProof accepts changes that reduce false positives, improve evidence quality, or make verified output easier to consume.
 
-- keep CLI additions evidence-focused and safe by default
-- prefer strict false-positive filtering over noisy output
-- add runtime dependencies only when they improve transport, evidence, or correctness enough to justify the cost
-- add tests for every new detection or proof-gate branch
-- avoid destructive payloads and denial-of-service techniques
+## Add or change a detector template
 
-Before submitting a change:
+Detector definitions belong in the separately distributed `headerproof-templates` set. HeaderProof supports two template paths:
 
+1. Use an existing bounded primitive (`baseline`, `preflight`, `origin-probe`, `query-probe`, `header-probe`, `cache-state-machine`, `crlf-query-probe`, or `header-oob-probe`) when the detector needs HeaderProof's specialized multi-request evidence logic.
+2. Use `request.kind: http` for a new same-target detector that can be expressed as a safe `GET`, `HEAD`, or `OPTIONS` request. `headers` and `query` accept `{{canary}}`, `{{hostname}}`, and `{{url}}` variables, so adding this class of detector does not require Python changes.
+
+A generic HTTP template defines condition-object `matchers`, path-based `extractors`, finding metadata, and an independent `assessment.gate`. The matcher decides whether an observation exists; the gate decides whether it can become a finding.
+
+```json
+{
+  "id": "example_header_reflection",
+  "check": "example",
+  "request": {
+    "kind": "http",
+    "method": "GET",
+    "query": {"probe": "{{canary}}"}
+  },
+  "matchers": [
+    {"op": "contains", "path": "response.headers.x-example", "value": "{{canary}}"}
+  ],
+  "extractors": [
+    {"name": "reflected_value", "path": "response.headers.x-example"}
+  ],
+  "finding": {
+    "severity": "high",
+    "confidence": "high",
+    "title": "Configured canary was reproduced"
+  },
+  "assessment": {
+    "default_state": "observed",
+    "passed_state": "reproduced",
+    "gate": [{"op": "truthy", "path": "evidence.reflected_value"}],
+    "missing_proof": ["configured response evidence was not reproduced"],
+    "passed_missing_proof": []
+  },
+  "verification": {
+    "report_gate": "Require independent impact validation before reporting."
+  }
+}
+```
+
+Keep `missing_proof` explicit. Technical reproduction must not be described as victim impact. State-changing methods are intentionally rejected by the generic executor; specialized active workflows stay in bounded engine primitives.
+
+Add a focused test in `tests/test_templates.py`. A new generic HTTP detector must prove that it works without adding Python detector code.
+
+## Local checks
 ```bash
 python3 -m compileall -q header_active_scan.py src/headerproof
 python3 -m ruff check header_active_scan.py src/headerproof tests
 python3 -m mypy
 python3 -m pytest -q
 python3 -m pytest -q --cov=headerproof.detectors --cov=headerproof.evidence --cov-branch --cov-fail-under=95
-./headerproof -h
 ```

@@ -6,6 +6,7 @@ from typing import Any
 from .constants import CACHEABLE_STATUSES, LIKELY_AUTH_COOKIE, TEXTUAL_CONTENT, UNSAFE_METHODS
 from .evidence import make_signal
 from .models import HttpSnapshot
+from .templates import extract_template_evidence, template_matches
 
 
 def header_join(snap: HttpSnapshot, name: str) -> str:
@@ -70,10 +71,21 @@ def shared_cache_hit_markers(indicators: list[str]) -> list[str]:
             if match and int(match.group(0)) > 0:
                 markers.append(indicator)
         elif name_l == "x-cache-hits":
-            match = re.search(r"\d+", value_l)
-            if match and int(match.group(0)) > 0:
+            if any(int(item) > 0 for item in re.findall(r"\d+", value_l)):
                 markers.append(indicator)
-        elif name_l in {"x-cache", "cf-cache-status", "cache-status", "akamai-cache-status", "server-timing"}:
+        elif name_l == "x-cache":
+            # Fastly can report multiple cache nodes (for example "HIT, MISS"
+            # with shielding). Any HIT component means a cache satisfied at least
+            # one leg of the request path.
+            if re.search(r"\bhit(?:-[a-z0-9_-]+)?\b", value_l):
+                markers.append(indicator)
+        elif name_l == "cf-cache-status":
+            # Cloudflare documents HIT, STALE, UPDATING and REVALIDATED as
+            # responses served from, or validated through, cache. MISS/BYPASS/
+            # DYNAMIC/EXPIRED are deliberately not promoted as hit evidence.
+            if value_l.strip() in {"hit", "stale", "updating", "revalidated"}:
+                markers.append(indicator)
+        elif name_l in {"cache-status", "akamai-cache-status", "server-timing"}:
             has_hit = re.search(r"\b(hit|cached|revalidated)\b", value_l)
             has_miss = re.search(r"\b(miss|bypass|dynamic|uncacheable|expired)\b", value_l)
             if has_hit and not has_miss:
@@ -91,8 +103,7 @@ def header_int(snap: HttpSnapshot | None, name: str) -> int:
 def has_cache_hit_header(snap: HttpSnapshot | None) -> bool:
     if snap is None:
         return False
-    indicators = " ".join(shared_cache_hit_markers(cache_indicators(snap))).lower()
-    return bool(re.search(r"\b(hit|cached|revalidated)\b", indicators))
+    return bool(shared_cache_hit_markers(cache_indicators(snap)))
 
 
 def cache_hit_progressed(
@@ -182,27 +193,39 @@ def parse_cookie(cookie: str) -> dict[str, Any]:
     return attrs
 
 
+def template_evidence(signal_type: str, context: dict[str, Any], **extra: Any) -> dict[str, Any]:
+    return {**extract_template_evidence(signal_type, context), **extra}
+
+
 def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body: bool) -> list[dict[str, Any]]:
     signals: list[dict[str, Any]] = []
-    cookies = baseline.values("set-cookie")
-    parsed_cookies = [parse_cookie(cookie) for cookie in cookies]
+    parsed_cookies = [parse_cookie(cookie) for cookie in baseline.values("set-cookie")]
     for cookie in parsed_cookies:
-        if not cookie["samesite"]:
-            severity = "medium" if cookie["likely_auth"] else "low"
+        context = {
+            "cookie_name": cookie["name"],
+            "likely_auth_cookie": cookie["likely_auth"],
+            "secure": cookie["secure"],
+            "samesite": cookie["samesite"],
+            "samesite_missing": not cookie["samesite"],
+            "auth_cookie_cross_site": cookie["samesite"] == "none" and cookie["likely_auth"],
+            "samesite_none": cookie["samesite"] == "none",
+            "secure_missing": not cookie["secure"],
+        }
+        if template_matches("csrf_cookie_samesite_missing", context):
             signals.append(
                 make_signal(
                     "csrf",
                     "csrf_cookie_samesite_missing",
-                    severity,
+                    "medium" if cookie["likely_auth"] else "low",
                     "medium",
                     "Set-Cookie lacks SameSite; CSRF risk if this cookie authenticates state-changing requests",
-                    {"cookie_name": cookie["name"], "likely_auth_cookie": cookie["likely_auth"]},
+                    template_evidence("csrf_cookie_samesite_missing", context),
                     baseline,
                     "Confirm with a real state-changing action and a cross-site PoC before reporting.",
                     save_body,
                 )
             )
-        elif cookie["samesite"] == "none" and cookie["likely_auth"]:
+        if template_matches("csrf_cookie_cross_site_auth", context):
             signals.append(
                 make_signal(
                     "csrf",
@@ -210,17 +233,13 @@ def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body
                     "medium",
                     "medium",
                     "Likely auth cookie uses SameSite=None; CSRF depends on token/origin enforcement",
-                    {
-                        "cookie_name": cookie["name"],
-                        "secure": cookie["secure"],
-                        "samesite": cookie["samesite"],
-                    },
+                    template_evidence("csrf_cookie_cross_site_auth", context),
                     baseline,
                     "Test token removal/reuse and forged Origin/Referer on an authorized state-changing workflow.",
                     save_body,
                 )
             )
-        if cookie["samesite"] == "none" and not cookie["secure"]:
+        if template_matches("cookie_samesite_none_without_secure", context):
             signals.append(
                 make_signal(
                     "csrf",
@@ -228,7 +247,7 @@ def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body
                     "low",
                     "high",
                     "Cookie sets SameSite=None without Secure",
-                    {"cookie_name": cookie["name"]},
+                    template_evidence("cookie_samesite_none_without_secure", context),
                     baseline,
                     "Treat as hardening signal unless chained to a working CSRF or session exposure path.",
                     save_body,
@@ -239,7 +258,9 @@ def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body
     if options:
         method_headers.extend([header_join(options, "allow"), header_join(options, "access-control-allow-methods")])
     unsafe = sorted(parse_methods(*method_headers) & UNSAFE_METHODS)
-    if unsafe and any(cookie["likely_auth"] for cookie in parsed_cookies):
+    auth_cookie_names = [cookie["name"] for cookie in parsed_cookies if cookie["likely_auth"]]
+    context = {"auth_cookie": bool(auth_cookie_names), "unsafe_methods": unsafe, "cookie_names": auth_cookie_names}
+    if template_matches("csrf_cookie_auth_unsafe_methods_exposed", context):
         signals.append(
             make_signal(
                 "csrf",
@@ -247,7 +268,7 @@ def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body
                 "medium",
                 "low",
                 "Likely cookie-auth surface advertises unsafe methods",
-                {"unsafe_methods": unsafe, "cookie_names": [c["name"] for c in parsed_cookies if c["likely_auth"]]},
+                template_evidence("csrf_cookie_auth_unsafe_methods_exposed", context),
                 options or baseline,
                 "Use browser/API parity testing and a separate read-back to prove a cross-site side effect.",
                 save_body,
@@ -255,90 +276,68 @@ def analyze_csrf(baseline: HttpSnapshot, options: HttpSnapshot | None, save_body
         )
     return signals
 
-
 def analyze_cors_probe(origin: str, snap: HttpSnapshot, save_body: bool) -> list[dict[str, Any]]:
     signals: list[dict[str, Any]] = []
     acao_values = [value.strip() for value in snap.values("access-control-allow-origin")]
     if not acao_values:
         return signals
-    acac = header_join(snap, "access-control-allow-credentials").lower().strip() == "true"
+    credentials = header_join(snap, "access-control-allow-credentials").lower().strip() == "true"
     cacheable, indicators = looks_cacheable(snap)
     methods = sorted(parse_methods(header_join(snap, "access-control-allow-methods")) & UNSAFE_METHODS)
     for acao in acao_values:
-        acao_l = acao.lower()
-        reflected = acao == origin or (origin == "null" and acao_l == "null")
-        wildcard = acao == "*"
-        if reflected and acac:
+        reflected = acao == origin or (origin == "null" and acao.lower() == "null")
+        context = {
+            "reflected": reflected,
+            "credentials": credentials,
+            "credentials_missing": not credentials,
+            "wildcard": acao == "*",
+            "cacheable": cacheable,
+            "vary_origin_missing": not vary_has(snap, "origin"),
+            "access_control_allow_origin": acao,
+            "unsafe_methods": methods,
+            "cache_indicators": indicators,
+        }
+        if template_matches("cors_arbitrary_origin_with_credentials", context):
             signals.append(
                 make_signal(
-                    "cors",
-                    "cors_arbitrary_origin_with_credentials",
-                    "high",
-                    "high",
+                    "cors", "cors_arbitrary_origin_with_credentials", "high", "high",
                     "Arbitrary Origin is reflected with Access-Control-Allow-Credentials: true",
-                    {
-                        "origin": origin,
-                        "access_control_allow_origin": acao,
-                        "unsafe_methods": methods,
-                    },
-                    snap,
+                    template_evidence("cors_arbitrary_origin_with_credentials", context, origin=origin), snap,
                     "Confirm against an authenticated sensitive endpoint and capture credentialed data exfiltration.",
                     save_body,
                 )
             )
-        elif reflected:
+        if template_matches("cors_arbitrary_origin_reflection", context):
             signals.append(
                 make_signal(
-                    "cors",
-                    "cors_arbitrary_origin_reflection",
-                    "medium",
-                    "high",
+                    "cors", "cors_arbitrary_origin_reflection", "medium", "high",
                     "Arbitrary Origin is reflected in Access-Control-Allow-Origin",
-                    {"origin": origin, "access_control_allow_origin": acao, "unsafe_methods": methods},
-                    snap,
-                    "Check whether credentials, tokens, or sensitive unauthenticated data are reachable.",
-                    save_body,
+                    template_evidence("cors_arbitrary_origin_reflection", context, origin=origin), snap,
+                    "Check whether credentials, tokens, or sensitive unauthenticated data are reachable.", save_body,
                 )
             )
-        elif wildcard:
-            severity = "low"
-            title = "Wildcard CORS is enabled"
-            if acac:
-                title = "Wildcard CORS appears with credentials header; browsers block credentialed wildcard reads"
+        if template_matches("cors_wildcard_origin", context):
+            title = (
+                "Wildcard CORS appears with credentials header; browsers block credentialed wildcard reads"
+                if credentials else "Wildcard CORS is enabled"
+            )
             signals.append(
                 make_signal(
-                    "cors",
-                    "cors_wildcard_origin",
-                    severity,
-                    "medium",
-                    title,
-                    {"origin": origin, "access_control_allow_origin": acao, "credentials": acac},
-                    snap,
-                    "Do not report wildcard CORS alone; chain to credentialed data exfiltration if possible.",
-                    save_body,
+                    "cors", "cors_wildcard_origin", "low", "medium", title,
+                    template_evidence("cors_wildcard_origin", context, origin=origin), snap,
+                    "Do not report wildcard CORS alone; chain to credentialed data exfiltration if possible.", save_body,
                 )
             )
-
-        if reflected and not vary_has(snap, "origin") and cacheable:
+        if template_matches("cors_cache_poisoning_candidate", context):
             signals.append(
                 make_signal(
-                    "cache-poisoning",
-                    "cors_cache_poisoning_candidate",
-                    "medium",
-                    "medium",
+                    "cache-poisoning", "cors_cache_poisoning_candidate", "medium", "medium",
                     "Reflected CORS origin on a cacheable response lacks Vary: Origin",
-                    {
-                        "origin": origin,
-                        "access_control_allow_origin": acao,
-                        "cache_indicators": indicators,
-                    },
-                    snap,
-                    "Confirm whether a second client receives the poisoned ACAO value from shared cache.",
-                    save_body,
+                    template_evidence("cors_cache_poisoning_candidate", context, origin=origin), snap,
+                    "Confirm whether a second client receives the poisoned ACAO value from shared cache.", save_body,
                 )
             )
     return signals
-
 
 def default_origin_variants(hostname: str, canary: str, user_origins: list[str], mode: str) -> list[str]:
     origins = [f"https://{canary}.invalid"]
@@ -371,14 +370,43 @@ def default_header_probe_names(custom_headers: list[str], limit: int) -> list[st
     return probes
 
 
-def header_probe_value(header_name: str, canary: str) -> str:
+def header_probe_value(header_name: str, canary: str, host_override: str = "") -> str:
     name = header_name.lower()
+    host = host_override or f"{canary}.invalid"
     if name == "forwarded":
-        return f"for=192.0.2.1;host={canary}.invalid;proto=https"
+        return f"for=192.0.2.1;host={host};proto=https"
     if name in {"x-original-url", "x-rewrite-url", "x-forwarded-prefix"}:
         return f"/{canary}"
-    return f"{canary}.invalid"
+    return host
 
+
+def analyze_oob_header_probe(
+    header_name: str,
+    token: str,
+    events: list[dict[str, Any]],
+    probe: HttpSnapshot,
+    save_body: bool,
+) -> list[dict[str, Any]]:
+    protocols = sorted({str(item.get("protocol", "unknown")) for item in events})
+    context = {
+        "oob_confirmed": bool(events),
+        "protocols": protocols,
+        "event_count": len(events),
+    }
+    if not template_matches("blind_header_oob_confirmed", context):
+        return []
+    return [
+        make_signal(
+            "header-injection", "blind_header_oob_confirmed", "high", "high",
+            "Header probe produced an out-of-band callback",
+            template_evidence(
+                "blind_header_oob_confirmed", context, probe_header=header_name, oob_token=token, oob_confirmed=True
+            ),
+            probe,
+            "Confirm the callback is attributable to the tested request and document the backend interaction.",
+            save_body,
+        )
+    ]
 
 def analyze_header_probe(
     header_name: str,
@@ -399,62 +427,58 @@ def analyze_header_probe(
     reflected_headers = [loc for loc in locations if loc["where"] == "response_header"]
     reflected_body = [loc for loc in locations if loc["where"] == "response_body"]
 
-    if reflected_headers:
-        header_names = sorted({loc["name"] for loc in reflected_headers})
-        signal_type = "header_reflection_candidate"
-        severity = "medium"
-        title = "Request header value is reflected into response headers"
-        if any(name in {"location", "link", "access-control-allow-origin"} for name in header_names):
-            signal_type = "header_poisoning_candidate"
-            severity = "high"
-            title = "Request header value controls a security-relevant response header"
+    security_header_names = {"location", "link", "access-control-allow-origin"}
+    security_header_hits = [loc for loc in reflected_headers if loc["name"] in security_header_names]
+    header_context = {
+        "header_hits": reflected_headers,
+        "security_header_hits": security_header_hits,
+        "security_header_missing": not security_header_hits,
+        "locations": reflected_headers,
+    }
+    common_extra = {"probe_id": probe_id, "canary": canary, "probe_header": header_name}
+    if template_matches("header_poisoning_candidate", header_context):
         signals.append(
             make_signal(
-                "header-injection",
-                signal_type,
-                severity,
-                "high",
-                title,
-                {"probe_id": probe_id, "canary": canary, "probe_header": header_name, "locations": reflected_headers},
-                probe,
+                "header-injection", "header_poisoning_candidate", "high", "high",
+                "Request header value controls a security-relevant response header",
+                template_evidence("header_poisoning_candidate", header_context, **common_extra), probe,
+                "Validate exploitability with a victim-context request pair; CRLF is not proven by reflection alone.",
+                save_body,
+            )
+        )
+    if template_matches("header_reflection_candidate", header_context):
+        signals.append(
+            make_signal(
+                "header-injection", "header_reflection_candidate", "medium", "high",
+                "Request header value is reflected into response headers",
+                template_evidence("header_reflection_candidate", header_context, **common_extra), probe,
                 "Validate exploitability with a victim-context request pair; CRLF is not proven by reflection alone.",
                 save_body,
             )
         )
 
-    if reflected_body and is_textual_response(probe):
+    body_context = {
+        "textual_body_hits": reflected_body if is_textual_response(probe) else [],
+        "locations": reflected_body,
+    }
+    if template_matches("header_based_content_spoofing", body_context):
         signals.append(
             make_signal(
-                "content-spoofing",
-                "header_based_content_spoofing",
-                "medium",
-                "high",
+                "content-spoofing", "header_based_content_spoofing", "medium", "high",
                 "Request header value is reflected in textual response body",
-                {"probe_id": probe_id, "canary": canary, "probe_header": header_name, "locations": reflected_body},
-                probe,
-                "Check whether the reflected content is reachable by victims and whether it can be cached.",
-                save_body,
+                template_evidence("header_based_content_spoofing", body_context, **common_extra), probe,
+                "Check whether the reflected content is reachable by victims and whether it can be cached.", save_body,
             )
         )
 
-    if cacheable:
+    cache_context = {"locations": locations, "cacheable": cacheable, "cache_indicators": indicators}
+    if template_matches("unkeyed_header_cache_poisoning_candidate", cache_context):
         signals.append(
             make_signal(
-                "cache-poisoning",
-                "unkeyed_header_cache_poisoning_candidate",
-                "medium",
-                "medium",
+                "cache-poisoning", "unkeyed_header_cache_poisoning_candidate", "medium", "medium",
                 "Header reflection appears on a cacheable response",
-                {
-                    "probe_id": probe_id,
-                    "canary": canary,
-                    "probe_header": header_name,
-                    "locations": locations,
-                    "cache_indicators": indicators,
-                },
-                probe,
-                "A report needs a clean victim request receiving the poisoned response from shared cache.",
-                save_body,
+                template_evidence("unkeyed_header_cache_poisoning_candidate", cache_context, **common_extra), probe,
+                "A report needs a clean victim request receiving the poisoned response from shared cache.", save_body,
             )
         )
 
@@ -505,113 +529,104 @@ def analyze_header_probe(
         completed_stages
         and all(state_machine_checks.values())
     )
+    state_context = {
+        "victim_locations": victim_locations,
+        "shared_cache_confirmed": shared_confirmed,
+        "shared_cache_unconfirmed": not shared_confirmed,
+        "state_machine_checks": state_machine_checks,
+        "shared_cache_hit_markers": shared_markers,
+    }
+    state_extra = {
+        "probe_id": probe_id,
+        "canary": canary,
+        "probe_header": header_name,
+        "poison_locations": locations,
+        "victim_locations": victim_locations,
+        "clean_before_locations": clean_before_locations,
+        "fresh_key_control_locations": control_locations,
+        "clean_follow_up": bool(victim_locations),
+        "fresh_key_control": snapshot_completed(control),
+        "cacheable_probe": cacheable,
+        "cache_indicators": sorted(set(indicators + victim_indicators + clean_before_indicators + control_indicators)),
+        "clean_before_cache_indicators": clean_before_indicators,
+        "victim_cache_indicators": victim_indicators,
+        "fresh_key_control_cache_indicators": control_indicators,
+        "shared_cache_confirmed": shared_confirmed,
+    }
     if victim_locations and (cacheable or victim_indicators):
-        signal_type = (
-            "cache_poisoning_shared_cache_confirmed"
-            if shared_confirmed
-            else "cache_poisoning_cross_request_reproduction"
-        )
-        title = (
-            "Shared cache served the poisoned canary to a clean client"
-            if shared_confirmed
-            else "Clean follow-up reproduced the poison, but shared-cache proof is incomplete"
-        )
-        signals.append(
-            make_signal(
-                "cache-poisoning",
-                signal_type,
-                "high",
-                "high",
-                title,
-                {
-                    "probe_id": probe_id,
-                    "canary": canary,
-                    "probe_header": header_name,
-                    "poison_locations": locations,
-                    "victim_locations": victim_locations,
-                    "clean_before_locations": clean_before_locations,
-                    "fresh_key_control_locations": control_locations,
-                    "clean_follow_up": True,
-                    "fresh_key_control": snapshot_completed(control),
-                    "cacheable_probe": cacheable,
-                    "cache_indicators": sorted(
-                        set(indicators + victim_indicators + clean_before_indicators + control_indicators)
-                    ),
-                    "clean_before_cache_indicators": clean_before_indicators,
-                    "victim_cache_indicators": victim_indicators,
-                    "fresh_key_control_cache_indicators": control_indicators,
-                    "shared_cache_confirmed": shared_confirmed,
-                    "shared_cache_hit_markers": shared_markers,
-                    "state_machine_checks": state_machine_checks,
-                },
-                victim,
-                "Repeat on an authorized low-traffic path and prove cross-client reachability before reporting.",
-                save_body,
+        for signal_type, title in (
+            ("cache_poisoning_shared_cache_confirmed", "Shared cache served the poisoned canary to a clean client"),
+            (
+                "cache_poisoning_cross_request_reproduction",
+                "Clean follow-up reproduced the poison, but shared-cache proof is incomplete",
+            ),
+        ):
+            if not template_matches(signal_type, state_context):
+                continue
+            signals.append(
+                make_signal(
+                    "cache-poisoning", signal_type, "high", "high", title,
+                    template_evidence(signal_type, state_context, **state_extra), victim,
+                    "Repeat on an authorized low-traffic path and prove cross-client reachability before reporting.",
+                    save_body,
+                )
             )
-        )
 
     return signals
 
 
 def analyze_content_param(canary: str, snap: HttpSnapshot, save_body: bool) -> list[dict[str, Any]]:
     locations = canary_locations(snap, canary)
-    if not locations:
-        return []
-    signals: list[dict[str, Any]] = []
     body_hits = [loc for loc in locations if loc["where"] == "response_body"]
     header_hits = [loc for loc in locations if loc["where"] == "response_header"]
-    if body_hits and is_textual_response(snap):
+    signals: list[dict[str, Any]] = []
+    body_context = {
+        "textual_body_hits": body_hits if is_textual_response(snap) else [],
+        "locations": body_hits,
+    }
+    if template_matches("query_parameter_content_reflection", body_context):
         signals.append(
             make_signal(
-                "content-spoofing",
-                "query_parameter_content_reflection",
-                "low",
-                "high",
+                "content-spoofing", "query_parameter_content_reflection", "low", "high",
                 "Query parameter value is reflected in textual response body",
-                {"locations": body_hits},
-                snap,
-                "Content spoofing becomes reportable only with victim impact, caching, or script execution.",
-                save_body,
+                template_evidence("query_parameter_content_reflection", body_context), snap,
+                "Content spoofing becomes reportable only with victim impact, caching, or script execution.", save_body,
             )
         )
-    if header_hits:
+    header_context = {"header_hits": header_hits, "locations": header_hits}
+    if template_matches("query_parameter_header_reflection", header_context):
         signals.append(
             make_signal(
-                "header-injection",
-                "query_parameter_header_reflection",
-                "medium",
-                "medium",
+                "header-injection", "query_parameter_header_reflection", "medium", "medium",
                 "Query parameter value is reflected into response headers",
-                {"locations": header_hits},
-                snap,
+                template_evidence("query_parameter_header_reflection", header_context), snap,
                 "Try controlled response-splitting validation only on authorized targets and without user impact.",
                 save_body,
             )
         )
     return signals
 
-
 def analyze_crlf_probe(canary: str, snap: HttpSnapshot, save_body: bool) -> list[dict[str, Any]]:
     injected_header_values = snap.values("x-pa-injected")
     injected_header_seen = any(value.strip() == canary for value in injected_header_values)
     locations = canary_locations(snap, canary)
-    if not injected_header_seen and not locations:
+    context = {
+        "locations": locations,
+        "injected_header_seen": injected_header_seen,
+        "injected_header_values": injected_header_values[:3],
+    }
+    if not template_matches("response_splitting_crlf_candidate", context):
         return []
-    severity = "high" if injected_header_seen else "medium"
-    confidence = "high" if injected_header_seen else "medium"
     return [
         make_signal(
-            "header-injection",
-            "response_splitting_crlf_candidate",
-            severity,
-            confidence,
+            "header-injection", "response_splitting_crlf_candidate",
+            "high" if injected_header_seen else "medium",
+            "high" if injected_header_seen else "medium",
             "CRLF query probe influenced response headers",
-            {
-                "injected_header_seen": injected_header_seen,
-                "injected_header_values": injected_header_values[:3],
-                "locations": locations,
-                "probe": "%0d%0aX-PA-Injected:<canary>",
-            },
+            template_evidence(
+                "response_splitting_crlf_candidate", context,
+                injected_header_seen=injected_header_seen, probe="%0d%0aX-PA-Injected:<canary>"
+            ),
             snap,
             "Re-test manually with a harmless cache-buster and prove a victim-observable header/body change.",
             save_body,

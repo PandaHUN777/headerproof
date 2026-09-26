@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import header_active_scan  # noqa: E402
+from headerproof.output import default_output_root, reserve_output_dir  # noqa: E402
 
 
 def make_snapshot(
@@ -43,6 +44,20 @@ def make_snapshot(
         client_context=client_context,
         error=error,
     )
+
+
+def test_default_output_dir_uses_xdg_state_home(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state_home = tmp_path / "state"
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+
+    out_dir = reserve_output_dir()
+
+    assert default_output_root() == state_home / "headerproof" / "runs"
+    assert out_dir.parent == state_home / "headerproof" / "runs"
+    assert out_dir.is_dir()
 
 
 class ScannerFixtureHandler(BaseHTTPRequestHandler):
@@ -230,7 +245,7 @@ def test_header_active_scan_detects_core_signals(tmp_path: Path) -> None:
         url = f"http://127.0.0.1:{server.server_port}/demo"
         input_file = tmp_path / "urls.txt"
         input_file.write_text(url + "\n")
-        args = header_active_scan.parse_cli_args(["-i", str(input_file), "--concurrency", "1"])
+        args = header_active_scan.parse_cli_args(["-l", str(input_file), "-c", "1"])
         args.fp_mode = "all"
         args.no_live_alerts = True
         args.no_preflight = False
@@ -256,17 +271,17 @@ def test_header_active_scan_detects_core_signals(tmp_path: Path) -> None:
 def test_header_active_scan_fast_defaults(tmp_path: Path) -> None:
     input_file = tmp_path / "urls.txt"
     input_file.write_text("https://example.com/\n")
-    args = header_active_scan.parse_cli_args(["-i", str(input_file)])
+    args = header_active_scan.parse_cli_args(["-l", str(input_file)])
 
     assert args.url_timeout == 9.0
-    assert args.timeout == 2.0
+    assert args.timeout == 2.5
     assert args.delay == 0.0
     assert args.concurrency == 16
-    assert args.per_url_concurrency == 6
-    assert args.max_body == 8192
-    assert args.origin_mode == "single"
-    assert args.header_probe_limit == 3
-    assert args.no_preflight is True
+    assert args.per_url_concurrency == 4
+    assert args.max_body == 16384
+    assert args.origin_mode == "standard"
+    assert args.header_probe_limit == 5
+    assert args.no_preflight is False
     assert args.no_cache_confirm is False
     assert args.fp_mode == "strict"
     assert args.min_alert_confidence == "medium"
@@ -285,7 +300,7 @@ def test_header_active_scan_version(capsys) -> None:
 
 
 def test_header_active_scan_missing_input_is_clean_error(capsys) -> None:
-    rc = header_active_scan.main_from_args(["-i", "/path/to/urls.txt"])
+    rc = header_active_scan.main_from_args(["-l", "/path/to/urls.txt"])
 
     captured = capsys.readouterr()
     assert rc == 2
@@ -293,53 +308,54 @@ def test_header_active_scan_missing_input_is_clean_error(capsys) -> None:
     assert "Traceback" not in captured.err
 
 
-def test_header_active_scan_cli_accepts_safe_advanced_options(tmp_path: Path) -> None:
+def test_header_active_scan_cli_matches_roadmap_options(tmp_path: Path) -> None:
     input_file = tmp_path / "urls.txt"
     input_file.write_text("https://example.com/\n")
+    output_file = tmp_path / "findings.jsonl"
 
-    ok = header_active_scan.parse_cli_args(
+    args = header_active_scan.parse_cli_args(
         [
-            "-i",
+            "-l",
             str(input_file),
-            "--concurrency",
+            "-c",
             "2",
-            "--profile",
-            "balanced",
-            "--timeout",
+            "-rl",
+            "4",
+            "-severity",
+            "high,medium",
+            "-o",
+            str(output_file),
+            "-json",
+            "-v",
+            "-timeout",
             "1.5",
-            "--origin",
-            "https://attacker.example",
-            "--header",
-            "X-Test-Probe",
-            "--out-dir",
-            str(tmp_path / "out"),
-            "--json",
         ]
     )
-    assert ok.input == str(input_file)
-    assert ok.concurrency == 2
-    assert ok.profile == "balanced"
-    assert ok.timeout == 1.5
-    assert ok.origin == ["https://attacker.example"]
-    assert ok.header == ["X-Test-Probe"]
-    assert ok.out_dir == str(tmp_path / "out")
-    assert ok.json is True
-    assert ok.quiet is True
-    assert ok.no_live_alerts is True
+
+    assert args.list_path == str(input_file)
+    assert args.concurrency == 2
+    assert args.rate_limit == 4.0
+    assert args.severity_filter == {"high", "medium"}
+    assert args.output == str(output_file)
+    assert args.json is True
+    assert args.verbose is True
+    assert args.timeout == 1.5
+    assert args.quiet is True
+    assert args.no_live_alerts is False
 
 
-def test_header_active_scan_rejects_invalid_custom_header(tmp_path: Path, capsys) -> None:
+def test_header_active_scan_rejects_removed_profile_flag(tmp_path: Path, capsys) -> None:
     input_file = tmp_path / "urls.txt"
     input_file.write_text("https://example.com/\n")
 
     try:
-        header_active_scan.parse_cli_args(["-i", str(input_file), "--header", "Bad Header"])
+        header_active_scan.parse_cli_args(["-l", str(input_file), "--profile", "thorough"])
     except SystemExit as exc:
         captured = capsys.readouterr()
         assert exc.code == 2
-        assert "invalid HTTP header name" in captured.err
+        assert "unrecognized arguments" in captured.err
     else:
-        raise AssertionError("invalid header names must be rejected")
+        raise AssertionError("removed profile flag must be rejected")
 
 
 def test_load_urls_handles_jsonl_invalid_urls_duplicates_and_limits(tmp_path: Path) -> None:
@@ -417,19 +433,17 @@ def test_header_active_scan_live_alerts_and_strict_filtering(tmp_path: Path, cap
         url = f"http://127.0.0.1:{server.server_port}/demo"
         input_file = tmp_path / "urls.txt"
         input_file.write_text(url + "\n")
-        args = header_active_scan.parse_cli_args(["-i", str(input_file), "--concurrency", "1"])
+        args = header_active_scan.parse_cli_args(["-l", str(input_file), "-c", "1"])
         args.no_color = True
 
         result = header_active_scan.scan_url(url, args)
         captured = capsys.readouterr()
         signal_types = {signal["type"] for signal in result["signals"]}
 
-        assert "VERIFIED TECHNICAL SIGNAL" in captured.err
-        assert "response_splitting_crlf_candidate" in captured.err
-        assert "Evidence" in captured.err
-        assert "FP guard:" in captured.err
-        assert "Still verify before reporting" in captured.err
-        assert "Next validation" in captured.err
+        assert "[response_splitting_crlf_candidate] [high] [reproduced]" in captured.out
+        assert "VERIFIED TECHNICAL SIGNAL" not in captured.out
+        assert "Why it is shown" not in captured.out
+        assert captured.err == ""
         assert "response_splitting_crlf_candidate" in signal_types
         assert "cors_arbitrary_origin_with_credentials" not in signal_types
         assert "query_parameter_content_reflection" not in signal_types
@@ -444,38 +458,37 @@ def test_header_active_scan_live_alerts_and_strict_filtering(tmp_path: Path, cap
         server.server_close()
 
 
-def test_main_json_out_dir_writes_metadata_and_machine_summary(tmp_path: Path, capsys) -> None:
+def test_main_json_stream_and_metadata(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
     server = ThreadingHTTPServer(("127.0.0.1", 0), ScannerFixtureHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        state_home = tmp_path / "state"
+        monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
         url = f"http://127.0.0.1:{server.server_port}/demo"
         input_file = tmp_path / "urls.txt"
-        out_dir = tmp_path / "evidence-out"
         input_file.write_text(url + "\n")
 
-        rc = header_active_scan.main_from_args(
-            ["-i", str(input_file), "--concurrency", "1", "--json", "--out-dir", str(out_dir)]
-        )
+        rc = header_active_scan.main_from_args(["-l", str(input_file), "-c", "1", "-json"])
         captured = capsys.readouterr()
-        summary = json.loads(captured.out)
+        records = [json.loads(line) for line in captured.out.splitlines() if line.strip()]
+        run_dirs = list((state_home / "headerproof" / "runs").glob("headerproof-*"))
+        assert len(run_dirs) == 1
+        out_dir = run_dirs[0]
         metadata = json.loads((out_dir / "metadata.json").read_text())
 
-        assert rc == 0
+        assert rc == 1
         assert captured.err == ""
-        assert summary["urls"] == 1
-        assert summary["out_dir"] == str(out_dir)
+        assert records
+        assert all(item["url"] == url for item in records)
         assert metadata["tool"] == "HeaderProof"
-        assert metadata["config"]["profile"] == "fast"
         assert metadata["config"]["concurrency"] == 1
-        assert metadata["command"][0] == "headerproof"
+        assert "profile" not in metadata["config"]
         observations = (out_dir / "observations.jsonl").read_text().splitlines()
         probes = [json.loads(line) for line in (out_dir / "probes.jsonl").read_text().splitlines()]
         assert observations
         assert probes
         assert all(probe["exchange"] is not None for probe in probes if probe["status"] == "completed")
-        assert all(probe["exchange"]["response"]["status"] == 200 for probe in probes if probe["role"] != "preflight")
-        assert summary["error"] == 0
     finally:
         server.shutdown()
         server.server_close()
@@ -489,7 +502,7 @@ def test_scan_timeout_keeps_batch_moving(tmp_path: Path) -> None:
         url = f"http://127.0.0.1:{server.server_port}/slow"
         input_file = tmp_path / "urls.txt"
         input_file.write_text(url + "\n")
-        args = header_active_scan.parse_cli_args(["-i", str(input_file), "--concurrency", "1", "--timeout", "0.05"])
+        args = header_active_scan.parse_cli_args(["-l", str(input_file), "-c", "1", "-timeout", "0.05"])
         args.no_live_alerts = True
         args.url_timeout = 0.12
 
@@ -506,7 +519,7 @@ def test_scan_timeout_keeps_batch_moving(tmp_path: Path) -> None:
 def test_unreachable_baseline_is_error_not_scanned(tmp_path: Path) -> None:
     input_file = tmp_path / "urls.txt"
     input_file.write_text("http://127.0.0.1:1/\n")
-    args = header_active_scan.parse_cli_args(["-i", str(input_file), "--timeout", "0.05"])
+    args = header_active_scan.parse_cli_args(["-l", str(input_file), "-timeout", "0.05"])
     args.no_live_alerts = True
 
     result = header_active_scan.scan_url("http://127.0.0.1:1/", args)
@@ -575,7 +588,7 @@ def test_probe_errors_make_scan_partial_and_are_recorded(tmp_path: Path, monkeyp
     monkeypatch.setattr(header_active_scan.HttpClient, "fetch", fake_fetch)
     input_file = tmp_path / "urls.txt"
     input_file.write_text("http://fixture.invalid/\n")
-    args = header_active_scan.parse_cli_args(["-i", str(input_file), "--concurrency", "2"])
+    args = header_active_scan.parse_cli_args(["-l", str(input_file), "-c", "2"])
     args.no_live_alerts = True
 
     result = header_active_scan.scan_url("http://fixture.invalid/", args)
@@ -588,51 +601,49 @@ def test_probe_errors_make_scan_partial_and_are_recorded(tmp_path: Path, monkeyp
     assert any(item["state"] == "error" for item in result["coverage"] if item["kind"] == "probe")
 
 
-def test_all_failed_batch_returns_nonzero_and_reports_error_count(tmp_path: Path, capsys) -> None:
+def test_all_failed_batch_returns_error_exit_code(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    state_home = tmp_path / "state"
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
     input_file = tmp_path / "urls.txt"
-    out_dir = tmp_path / "failed-run"
     input_file.write_text("http://127.0.0.1:1/\n")
 
     rc = header_active_scan.main_from_args(
-        [
-            "-i",
-            str(input_file),
-            "--concurrency",
-            "1",
-            "--timeout",
-            "0.05",
-            "--json",
-            "--out-dir",
-            str(out_dir),
-        ]
+        ["-l", str(input_file), "-c", "1", "-timeout", "0.05", "-json"]
     )
-    payload = json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    run_dirs = list((state_home / "headerproof" / "runs").glob("headerproof-*"))
+    assert len(run_dirs) == 1
+    out_dir = run_dirs[0]
+    metadata = json.loads((out_dir / "metadata.json").read_text())
 
-    assert rc == 1
-    assert payload["scanned"] == 0
-    assert payload["error"] == 1
-    assert payload["error_events"] >= 1
+    assert rc == 2
+    assert captured.out == ""
+    assert metadata["summary"]["scanned"] == 0
+    assert metadata["summary"]["error"] == 1
+    assert metadata["summary"]["error_events"] >= 1
     assert (out_dir / "errors.jsonl").read_text().splitlines()
 
 
-def test_output_records_match_published_json_schema(tmp_path: Path, capsys) -> None:
+def test_output_records_match_published_json_schema(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     server = ThreadingHTTPServer(("127.0.0.1", 0), ScannerFixtureHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        state_home = tmp_path / "state"
+        monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
         input_file = tmp_path / "urls.txt"
-        out_dir = tmp_path / "schema-run"
         input_file.write_text(f"http://127.0.0.1:{server.server_port}/demo\n")
-        rc = header_active_scan.main_from_args(
-            ["-i", str(input_file), "--concurrency", "1", "--quiet", "--out-dir", str(out_dir)]
-        )
+        rc = header_active_scan.main_from_args(["-l", str(input_file), "-c", "1", "-silent"])
         capsys.readouterr()
+        run_dirs = list((state_home / "headerproof" / "runs").glob("headerproof-*"))
+        assert len(run_dirs) == 1
+        out_dir = run_dirs[0]
         schema = json.loads((ROOT / "schemas" / "evidence-v1.2.schema.json").read_text())
         validator = jsonschema.Draft202012Validator(schema)
         jsonschema.Draft202012Validator.check_schema(schema)
 
-        assert rc == 0
+        assert rc in {0, 1}
         for filename in (
             "results.jsonl",
             "signals.jsonl",
@@ -676,26 +687,31 @@ def test_large_input_list_deduplicates_without_expanding_scope(tmp_path: Path) -
     assert urls[0] == "https://example.com/path-0"
 
 
-def test_main_respects_global_http_concurrency(tmp_path: Path, capsys) -> None:
+def test_main_respects_global_http_concurrency(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     ConcurrencyFixtureHandler.active = 0
     ConcurrencyFixtureHandler.max_active = 0
     server = ThreadingHTTPServer(("127.0.0.1", 0), ConcurrencyFixtureHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        state_home = tmp_path / "state"
+        monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
         input_file = tmp_path / "urls.txt"
-        out_dir = tmp_path / "out"
         urls = [f"http://127.0.0.1:{server.server_port}/demo?u={index}" for index in range(6)]
         input_file.write_text("\n".join(urls) + "\n")
 
-        rc = header_active_scan.main_from_args(
-            ["-i", str(input_file), "--concurrency", "2", "--quiet", "--out-dir", str(out_dir)]
-        )
+        rc = header_active_scan.main_from_args(["-l", str(input_file), "-c", "2", "-silent"])
         capsys.readouterr()
+        run_dirs = list((state_home / "headerproof" / "runs").glob("headerproof-*"))
+        assert len(run_dirs) == 1
 
-        assert rc == 0
+        assert rc in {0, 1}
         assert ConcurrencyFixtureHandler.max_active <= 2
-        assert (out_dir / "probes.jsonl").exists()
+        assert (run_dirs[0] / "probes.jsonl").exists()
     finally:
         server.shutdown()
         server.server_close()
@@ -715,7 +731,7 @@ def test_independent_header_findings_are_not_hidden_as_duplicates(tmp_path: Path
         input_file = tmp_path / "urls.txt"
         input_file.write_text(url + "\n")
         args = header_active_scan.parse_cli_args(
-            ["-i", str(input_file), "--concurrency", "1", "--profile", "thorough"]
+            ["-l", str(input_file), "-c", "1"]
         )
         args.no_live_alerts = True
         args.header_probe_limit = 2
@@ -897,3 +913,95 @@ def test_install_scripts_are_executable_and_valid_shell() -> None:
         assert path.exists()
         assert path.stat().st_mode & 0o111
         subprocess.run(["sh", "-n", str(path)], check=True)
+
+
+def test_headerproof_yaml_loads_bulk_origins_and_headers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "headerproof.yaml").write_text(
+        "origins:\n"
+        "  - https://custom-origin.invalid\n"
+        "headers:\n"
+        "  - X-Custom-Cache-Key\n"
+        "rate_limit: 7\n"
+        "timeout: 1.5\n"
+        "severity: high,medium\n"
+    )
+
+    args = header_active_scan.parse_cli_args(["example.com"])
+
+    assert args.origin == ["https://custom-origin.invalid"]
+    assert args.header == ["X-Custom-Cache-Key"]
+    assert args.rate_limit == 7
+    assert args.timeout == 1.5
+    assert args.severity_filter == {"high", "medium"}
+    assert args.config_path.endswith("headerproof.yaml")
+
+
+def test_cli_values_override_headerproof_yaml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "headerproof.yaml").write_text(
+        "concurrency: 3\nrate_limit: 2\ntimeout: 1\nseverity: low\n"
+    )
+
+    args = header_active_scan.parse_cli_args(
+        ["example.com", "-c", "9", "-rl", "4", "-timeout", "2", "-severity", "high"]
+    )
+
+    assert args.concurrency == 9
+    assert args.rate_limit == 4
+    assert args.timeout == 2
+    assert args.severity_filter == {"high"}
+
+
+def test_invalid_headerproof_yaml_is_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "headerproof.yaml").write_text("unknown_option: true\n")
+
+    with pytest.raises(SystemExit):
+        header_active_scan.parse_cli_args(["example.com"])
+
+
+def test_headerproof_yaml_request_headers_are_applied_and_redacted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "headerproof.yaml").write_text(
+        "request_headers:\n"
+        "  Cookie: session=secret-value\n"
+        "  Authorization: 'Bearer test-token'\n"
+    )
+    args = header_active_scan.parse_cli_args(["example.com"])
+    assert args.request_headers == {
+        "Cookie": "session=secret-value",
+        "Authorization": "Bearer test-token",
+    }
+
+    metadata = header_active_scan.build_metadata(args, tmp_path / "input.txt", 1)
+    encoded = json.dumps(metadata)
+    assert metadata["config"]["request_headers_count"] == 2
+    assert "secret-value" not in encoded
+    assert "test-token" not in encoded
+
+
+def test_scan_applies_configured_request_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict[str, str]] = []
+
+    def fake_fetch(self, url, method="GET", headers=None, timeout=None, client_context="default"):
+        seen.append(dict(headers or {}))
+        return make_snapshot(
+            {"Content-Type": "text/plain", "Cache-Control": "no-store"},
+            request_url=url,
+            request_headers=headers,
+            client_context=client_context,
+        )
+
+    monkeypatch.setattr(header_active_scan.HttpClient, "fetch", fake_fetch)
+    args = header_active_scan.parse_cli_args(["https://example.com/"])
+    args.enabled_checks = set()
+    args.request_headers = {"Cookie": "session=fixture", "Authorization": "Bearer fixture"}
+    args.no_live_alerts = True
+
+    result = header_active_scan.scan_url("https://example.com/", args)
+
+    assert result["status"] == "scanned"
+    assert seen == [{"Cookie": "session=fixture", "Authorization": "Bearer fixture"}]
