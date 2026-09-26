@@ -117,17 +117,3 @@ def emit_live_alert(url: str, signal: dict[str, Any], args: argparse.Namespace) 
                 details.append("missing=" + "; ".join(shorten(item, 120) for item in missing[:2]))
             if details:
                 print("  " + " | ".join(details), flush=True)
-
-
-def ui_kv(label: str, value: Any) -> str:
-    return f"{label}: {value}"
-
-
-def ui_box(title: str, lines: list[str], color: str = "", stream: Any | None = None) -> None:
-    """Compatibility helper retained for callers outside the primary CLI."""
-    stream = sys.stderr if stream is None else stream
-    reset = reset_color(bool(color))
-    with ALERT_LOCK:
-        print(color + title + reset, file=stream)
-        for line in lines:
-            print(str(line), file=stream)

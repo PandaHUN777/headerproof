@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0
+
+- Simplified the public CLI around positional/list/stdin targets, bounded concurrency, per-host rate limiting, severity filters, SARIF, and automatic `headerproof.yaml` configuration.
+- Replaced terminal cards and banner-style output with grep-friendly finding lines and strict stdout/stderr separation.
+- Added declarative detector matcher/extractor/evidence-gate templates plus the independently published `headerproof-templates` update channel.
+- Added DNS/HTTP OOB callback confirmation for blind header interactions.
+- Added real Varnish and nginx cache fixtures with reproducible precision/recall artifacts; the controlled six-case corpus currently records TP=2, TN=4, FP=0, FN=0.
+- Added independently versioned evidence-schema compatibility policy, SARIF export, CI `0/1/2` exit semantics, and the separate `headerproof-action` integration repository.
+- Added one-file binary builds for Linux amd64/arm64, macOS amd64/arm64, and Windows amd64; the release matrix is smoke-tested on native GitHub runners.
+- Added checksum/signature release steps, binary-first installer behavior, PyPI publishing, and multi-architecture container publishing workflows.
+- Reduced README to the command path, verified output meaning, a terminal recording, and a short tool-scope comparison.
+
 ## 1.3.2
 
 - Changed the default evidence root to `${XDG_STATE_HOME:-~/.local/state}/headerproof/runs/` so the installed command works from any directory without colliding with root-owned project folders.

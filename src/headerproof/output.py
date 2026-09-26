@@ -194,7 +194,7 @@ def write_summary(
         f"- duplicate_signals: {payload['duplicate_signals']}",
     ]
     if top_signals:
-        lines.extend(["", "## Verified Technical Signals", ""])
+        lines.extend(["", "## Findings", ""])
         for signal in top_signals:
             assessment = signal.get("assessment", {})
             lines.append(
