@@ -96,9 +96,11 @@ def test_release_verification_and_maintainer_release_contract_are_documented() -
     assert "cosign verify-blob" in verifying
     assert "--signer-workflow tayfuryldz/headerproof/.github/workflows/release.yml" in verifying
     assert "--signer-workflow TayfurYldz/" not in verifying
-    assert "Current release workflows create GitHub artifact attestations" in verifying
+    assert "gh release verify vX.Y.Z" in verifying
+    assert "Current release workflows also create build provenance attestations" in verifying
     assert "Required CI checks on the release commit must be green" in releasing
-    assert "issue a patch release instead of replacing assets" in releasing
+    assert "GitHub marks the release immutable" in releasing
+    assert "issue a patch release for corrections" in releasing
     assert "[Documentation index](docs/README.md)" in readme
 
     index = DOC_INDEX.read_text()

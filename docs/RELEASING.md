@@ -43,6 +43,7 @@ the PyPI publisher configuration documented in `docs/PYPI.md`.
 - Run `--version` and `--help` from the downloaded native binary.
 - Confirm the GHCR image signature and provenance.
 - Confirm release notes credit every accepted external contribution included.
-- Keep the release immutable; issue a patch release instead of replacing assets.
+- Confirm GitHub marks the release immutable and `gh release verify` succeeds.
+- Never replace published assets; issue a patch release for corrections.
 
 See `docs/VERIFYING_RELEASES.md` for consumer verification commands.

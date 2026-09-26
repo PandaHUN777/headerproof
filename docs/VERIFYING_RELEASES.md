@@ -25,8 +25,16 @@ cosign verify-blob checksums.txt \
 
 ## GitHub provenance
 
-Current release workflows create GitHub artifact attestations for native binaries,
-Python distributions, and the published container image.
+Future HeaderProof releases are immutable after publication: their release tag and
+assets cannot be replaced. GitHub also creates a release attestation for immutable
+releases. Verify that release-level record with:
+
+```bash
+gh release verify vX.Y.Z -R tayfuryldz/headerproof
+```
+
+Current release workflows also create build provenance attestations for native
+binaries, Python distributions, and the published container image.
 
 Verify a downloaded artifact:
 
@@ -44,6 +52,6 @@ gh attestation verify oci://ghcr.io/tayfuryldz/headerproof:vX.Y.Z \
   --signer-workflow tayfuryldz/headerproof/.github/workflows/release.yml
 ```
 
-For older releases that predate GitHub release-artifact attestations, use the
-signed checksum bundle. Do not treat a missing historical GitHub attestation as
-a successful provenance check.
+For older releases that predate immutable releases or GitHub build attestations,
+use the signed checksum bundle. Do not treat a missing historical GitHub
+attestation as a successful provenance check.
