@@ -16,6 +16,8 @@ Link the accepted issue or Discussion when one exists. Explain the behavior chan
 
 A green CI run is necessary but not sufficient for merge: the change must preserve conservative evidence gates, remain maintainable, and match the accepted scope.
 
+Accepted external contributions retain their original commit authorship. After the first accepted contribution reaches `main`, the contributor is added to [`CONTRIBUTORS.md`](CONTRIBUTORS.md) and credited in the first release that ships the work.
+
 ## Add or change a detector template
 
 Detector definitions belong in the separately distributed `headerproof-templates` set. HeaderProof supports two template paths:

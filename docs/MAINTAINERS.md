@@ -41,6 +41,18 @@ Maintainers may ask for a PR to be split when independent changes can be reviewe
 
 Labels describe project state; they are not a promise that every proposed change will be merged.
 
+## Attribution
+
+External contributions keep their original commit author when integrated. Do not rewrite an accepted contributor's work as a maintainer-authored commit merely to simplify history.
+
+- Add a person to `CONTRIBUTORS.md` after their first accepted contribution reaches `main`, not when a pull request is merely opened.
+- Credit accepted external work in the first release that ships it using the contributor's GitHub handle and pull request number.
+- Do not list Dependabot, GitHub Actions, or other automation as community contributors.
+- Use `Co-authored-by` only for actual co-authorship; it is not a substitute for preserving the original author.
+- When a contribution needs maintainer fixes before integration, keep the contributor's commit where practical and put maintainer follow-up in a separate commit so attribution and review history stay clear.
+
 ## Releases
 
 Changes reach a release only after they are present on `main`, pass the project CI contract, and have release notes appropriate to their user impact. Release tags are not used as a substitute for merging maintained source into `main`.
+
+Use `docs/releases/TEMPLATE.md` as the release-note contract. When external work ships, include a `Contributors` section with `@handle`, pull request number, and a short factual description. Omit the section when there are no external contributors rather than manufacturing credit. Automated release-note configuration lives in `.github/release.yml` as a drafting aid; curated release notes remain authoritative.
