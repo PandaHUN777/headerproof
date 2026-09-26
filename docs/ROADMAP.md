@@ -44,14 +44,17 @@ Measured Fastly Fiddle real-edge fixture on 2026-09-26: TP=0, TN=2, FP=0, FN=1, 
 Phase 3 is complete as a validation phase: all requested provider/lab measurements now have reproducible harnesses and published results. The two external-CDN false negatives are retained as measured limitations rather than converted into unsupported confirmations.
 
 ### Phase 4 — Distribution
-Implemented:
+Implemented and release-verified:
 - PyInstaller single-file build path.
-- Linux amd64/arm64, macOS amd64/arm64, and Windows amd64 release matrix.
-- Release checksums and Sigstore/Cosign signature bundle.
-- Binary-first install.sh, Python distributions, and multi-architecture container workflow.
+- Linux amd64/arm64, macOS amd64/arm64, and Windows amd64 release matrix; all five v1.4.1 binaries passed native `--version` and `--help` smoke tests in GitHub Actions.
+- Published v1.4.1 GitHub Release with all five binaries, wheel, sdist, SHA-256 checksums, and a Sigstore/Cosign checksum signature bundle.
+- Binary-first `install.sh`; a clean v1.4.1 Linux install from the published release passed `--version` and `--help` locally.
+- Multi-architecture linux/amd64 + linux/arm64 GHCR image built, pushed, and keyless-signed by the v1.4.1 release workflow.
+- PyPI trusted-publishing job is implemented and explicitly gated until the external PyPI publisher is configured.
 
-Remaining:
-- Publish and verify the v1.4.0 release after the implementation branch is accepted into the release branch.
+External account settings still required for fully public secondary channels:
+- GHCR personal packages default to private; package visibility must be changed to Public once in GitHub's package settings. GitHub does not expose a package-visibility update endpoint for this workflow to automate.
+- PyPI needs a one-time Trusted Publisher/pending-publisher configuration for `headerproof` before `PYPI_PUBLISH_ENABLED=true` can safely enable publishing. No long-lived PyPI token is stored in the repository.
 
 ### Phase 5 — CI consumption
 Implemented:
