@@ -22,6 +22,7 @@ REQUEST_KINDS = {
     "cache-state-machine",
     "crlf-query-probe",
     "header-oob-probe",
+    "http",
 }
 MATCHER_CONTEXT_KEYS = {
     "exact-origin-reflection": "reflected",
@@ -69,6 +70,106 @@ EXTRACTOR_CONTEXT_KEYS = {
 }
 
 
+SAFE_HTTP_METHODS = {"GET", "HEAD", "OPTIONS"}
+GENERIC_CONDITION_OPS = {"truthy", "falsey", "equals", "not_equals", "contains", "not_contains", "regex", "status_recorded"}
+
+
+def _validate_http_request(spec: dict[str, Any], source: str) -> None:
+    unknown = sorted(set(spec) - {"kind", "method", "headers", "query"})
+    if unknown:
+        raise TemplateError(f"{source}: unknown http request field(s): {', '.join(unknown)}")
+    method = str(spec.get("method", "GET")).upper()
+    if method not in SAFE_HTTP_METHODS:
+        raise TemplateError(f"{source}: http template method must be one of {', '.join(sorted(SAFE_HTTP_METHODS))}")
+    for key in ("headers", "query"):
+        value = spec.get(key, {})
+        if not isinstance(value, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in value.items()):
+            raise TemplateError(f"{source}: request.{key} must be a string map")
+
+
+def _validate_http_matchers(matchers: list[Any], source: str) -> None:
+    if not matchers:
+        raise TemplateError(f"{source}: http template requires at least one matcher")
+    for matcher in matchers:
+        if not isinstance(matcher, dict):
+            raise TemplateError(f"{source}: http matchers must be condition objects")
+        op = str(matcher.get("op", ""))
+        path = matcher.get("path")
+        if op not in GENERIC_CONDITION_OPS:
+            raise TemplateError(f"{source}: unsupported http matcher op: {op}")
+        if op != "status_recorded" and (not isinstance(path, str) or not path):
+            raise TemplateError(f"{source}: http matcher path is required")
+
+
+def _validate_http_extractors(extractors: list[Any], source: str) -> None:
+    for extractor in extractors:
+        if not isinstance(extractor, dict):
+            raise TemplateError(f"{source}: http extractors must be objects")
+        if not isinstance(extractor.get("name"), str) or not extractor["name"]:
+            raise TemplateError(f"{source}: http extractor name is required")
+        if not isinstance(extractor.get("path"), str) or not extractor["path"]:
+            raise TemplateError(f"{source}: http extractor path is required")
+
+
+def _validate_http_finding(finding: Any, source: str) -> None:
+    if not isinstance(finding, dict):
+        raise TemplateError(f"{source}: http template finding block is required")
+    unknown = sorted(set(finding) - {"severity", "confidence", "title", "next_step"})
+    if unknown:
+        raise TemplateError(f"{source}: unknown finding field(s): {', '.join(unknown)}")
+    for key in ("severity", "confidence", "title"):
+        if not isinstance(finding.get(key), str) or not finding[key]:
+            raise TemplateError(f"{source}: finding.{key} is required")
+    if finding["severity"] not in {"info", "low", "medium", "high", "critical"}:
+        raise TemplateError(f"{source}: invalid finding.severity: {finding['severity']}")
+    if finding["confidence"] not in {"low", "medium", "high"}:
+        raise TemplateError(f"{source}: invalid finding.confidence: {finding['confidence']}")
+
+
+def render_template_value(value: str, variables: dict[str, str]) -> str:
+    rendered = value
+    for name, replacement in variables.items():
+        rendered = rendered.replace("{{" + name + "}}", replacement)
+    return rendered
+
+
+def http_template_context(snap: Any, variables: dict[str, str]) -> dict[str, Any]:
+    headers = {name.lower(): ", ".join(values) for name, values in snap.headers.items()}
+    return {
+        "status": snap.status,
+        "response": {
+            "status": snap.status,
+            "headers": headers,
+            "body": snap.body_sample,
+        },
+        "request": {
+            "method": snap.request_method,
+            "url": snap.request_url,
+            "headers": dict(snap.request_headers),
+        },
+        "vars": variables,
+    }
+
+
+def http_template_matches(template: dict[str, Any], context: dict[str, Any], variables: dict[str, str]) -> bool:
+    for matcher in template.get("matchers", []):
+        condition = dict(matcher)
+        if isinstance(condition.get("value"), str):
+            condition["value"] = render_template_value(condition["value"], variables)
+        if not evaluate_condition(condition, context):
+            return False
+    return True
+
+
+def extract_http_template_evidence(template: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    evidence: dict[str, Any] = {}
+    for extractor in template.get("extractors", []):
+        value = _path_value(context, str(extractor["path"]))
+        if value is not None:
+            evidence[str(extractor["name"])] = value
+    return evidence
+
+
 class TemplateError(ValueError):
     pass
 
@@ -96,6 +197,8 @@ def validate_template(payload: dict[str, Any], source: str = "") -> dict[str, An
         raise TemplateError(f"{source or payload.get('id', 'template')}: missing {', '.join(missing)}")
     if not isinstance(payload["id"], str) or not payload["id"].strip():
         raise TemplateError(f"{source}: template id must be a non-empty string")
+    if not isinstance(payload["check"], str) or not payload["check"].strip():
+        raise TemplateError(f"{source}: template check must be a non-empty string")
     if not isinstance(payload["request"], dict):
         raise TemplateError(f"{source}: request must be an object")
     request_kind = payload["request"].get("kind")
@@ -103,14 +206,20 @@ def validate_template(payload: dict[str, Any], source: str = "") -> dict[str, An
         raise TemplateError(f"{source}: unsupported request kind: {request_kind}")
     if not isinstance(payload["matchers"], list):
         raise TemplateError(f"{source}: matchers must be a list")
-    unknown_matchers = [item for item in payload["matchers"] if item not in MATCHER_CONTEXT_KEYS]
-    if unknown_matchers:
-        raise TemplateError(f"{source}: unknown matcher(s): {', '.join(map(str, unknown_matchers))}")
     if not isinstance(payload["extractors"], list):
         raise TemplateError(f"{source}: extractors must be a list")
-    unknown_extractors = [item for item in payload["extractors"] if item not in EXTRACTOR_CONTEXT_KEYS]
-    if unknown_extractors:
-        raise TemplateError(f"{source}: unknown extractor(s): {', '.join(map(str, unknown_extractors))}")
+    if request_kind == "http":
+        _validate_http_request(payload["request"], source)
+        _validate_http_matchers(payload["matchers"], source)
+        _validate_http_extractors(payload["extractors"], source)
+        _validate_http_finding(payload.get("finding"), source)
+    else:
+        unknown_matchers = [item for item in payload["matchers"] if item not in MATCHER_CONTEXT_KEYS]
+        if unknown_matchers:
+            raise TemplateError(f"{source}: unknown matcher(s): {', '.join(map(str, unknown_matchers))}")
+        unknown_extractors = [item for item in payload["extractors"] if item not in EXTRACTOR_CONTEXT_KEYS]
+        if unknown_extractors:
+            raise TemplateError(f"{source}: unknown extractor(s): {', '.join(map(str, unknown_extractors))}")
     assessment = payload["assessment"]
     if not isinstance(assessment, dict):
         raise TemplateError(f"{source}: assessment must be an object")
@@ -220,6 +329,17 @@ def evaluate_condition(condition: dict[str, Any], context: dict[str, Any]) -> bo
         return value == condition.get("value")
     if op == "not_equals":
         return value != condition.get("value")
+    if op == "contains":
+        expected = condition.get("value")
+        return isinstance(value, str) and isinstance(expected, str) and expected in value
+    if op == "not_contains":
+        expected = condition.get("value")
+        return isinstance(value, str) and isinstance(expected, str) and expected not in value
+    if op == "regex":
+        import re
+
+        pattern = condition.get("value")
+        return isinstance(value, str) and isinstance(pattern, str) and re.search(pattern, value) is not None
     if op == "all_true":
         return isinstance(value, dict) and bool(value) and all(bool(item) for item in value.values())
     if op == "status_recorded":
@@ -255,13 +375,15 @@ def update_templates(base_url: str | None = None) -> tuple[int, Path]:
     except Exception as exc:
         raise TemplateError(f"template update failed: {exc}") from exc
 
-    files = manifest.get("files", []) if isinstance(manifest, dict) else []
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != TEMPLATE_SCHEMA_VERSION:
+        raise TemplateError(
+            f"unsupported template manifest schema: {manifest.get('schema_version') if isinstance(manifest, dict) else None}"
+        )
+    files = manifest.get("files", [])
     if not isinstance(files, list) or not files:
         raise TemplateError("template manifest contains no files")
 
-    destination = user_template_dir()
-    destination.mkdir(parents=True, exist_ok=True)
-    downloaded = 0
+    staged: list[tuple[str, bytes]] = []
     for name in files:
         if not isinstance(name, str) or "/" in name or not name.endswith(".yaml"):
             raise TemplateError(f"invalid template manifest entry: {name!r}")
@@ -274,7 +396,13 @@ def update_templates(base_url: str | None = None) -> tuple[int, Path]:
         if not isinstance(payload, dict):
             raise TemplateError(f"{name}: template document must be an object")
         validate_template_document(payload, name)
-        (destination / name).write_bytes(raw)
-        downloaded += 1
+        staged.append((name, raw))
+
+    destination = user_template_dir()
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, raw in staged:
+        temporary = destination / f".{name}.tmp"
+        temporary.write_bytes(raw)
+        temporary.replace(destination / name)
     reload_templates()
-    return downloaded, destination
+    return len(staged), destination

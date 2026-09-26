@@ -19,13 +19,13 @@ Completed:
 - Optional advanced settings live in headerproof.yaml.
 
 ### Phase 2 — Declarative detectors
-Implemented in-tree:
-- Request primitive, matcher, extractor, assessment, and verification metadata are declared in src/headerproof/core.yaml.
-- Template validation/evaluation is implemented in src/headerproof/templates.py.
-- -update-templates supports a separately distributed template source.
-
-Remaining:
-- Publish and maintain the separately versioned headerproof-templates repository. This is intentionally not performed from work scoped only to this repository.
+Completed:
+- CORS, CSRF, CRLF/header injection, cache poisoning, and content spoofing definitions declare request primitive, matcher, extractor, assessment, and verification metadata in templates.
+- Specialized multi-request proof workflows remain bounded engine primitives; a generic same-target `http` request kind lets new safe GET/HEAD/OPTIONS detector classes define query/header probes, matchers, extractors, finding metadata, and evidence gates without Python detector changes.
+- Template validation rejects unsupported request fields, unsafe state-changing generic methods, invalid finding metadata, and unsupported manifest schema versions before installation.
+- The separately versioned `headerproof-templates` repository is published and its current `core.yaml` matches the bundled template payload.
+- `-update-templates` was verified against the published manifest and validates downloaded templates before atomically replacing local files.
+- Regression coverage includes a template-only detector with a new check name that performs a canary probe and reaches `reproduced` without adding Python detector code.
 
 ### Phase 3 — OOB and reproducible validation
 Implemented:

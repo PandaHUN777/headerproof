@@ -21,10 +21,17 @@ from .detectors import (
     default_origin_variants,
     header_probe_value,
 )
-from .evidence import signal_passes_fp_filter
+from .evidence import make_signal, signal_passes_fp_filter
 from .input import add_query, add_raw_query
 from .models import HttpSnapshot, ProbeState
 from .oob import callback_host, new_oob_token, wait_for_event
+from .templates import (
+    extract_http_template_evidence,
+    http_template_context,
+    http_template_matches,
+    render_template_value,
+    templates_for_request,
+)
 from .transport import HttpClient, UrlBudget, snapshot_summary
 from .ui import emit_live_alert
 
@@ -545,6 +552,74 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
                 return found
 
             add_task(f"header:{header_name}", "header-injection", header_task)
+
+    # Generic declarative HTTP templates are intentionally constrained to same-target,
+    # safe-method probes. This lets a new header-driven detector ship as template data
+    # without adding Python detector code.
+    for template in templates_for_request("http"):
+        template_id = str(template["id"])
+        detector = str(template["check"])
+        request_spec = template["request"]
+        finding_spec = template["finding"]
+        canary = new_canary()
+        variables = {"canary": canary, "hostname": hostname, "url": url}
+        query = {
+            str(name): render_template_value(str(value), variables)
+            for name, value in request_spec.get("query", {}).items()
+        }
+        request_url = add_query(url, query) if query else url
+        request_headers = {
+            str(name): render_template_value(str(value), variables)
+            for name, value in request_spec.get("headers", {}).items()
+        }
+        method = str(request_spec.get("method", "GET")).upper()
+        probe_id = new_probe_id("template")
+        probe_sequence = coverage.plan("probe", detector, probe_id, template_id)
+
+        def declarative_template_task(
+            template: dict[str, Any] = template,
+            template_id: str = template_id,
+            detector: str = detector,
+            variables: dict[str, str] = variables,
+            request_url: str = request_url,
+            request_headers: dict[str, str] = request_headers,
+            method: str = method,
+            probe_id: str = probe_id,
+            probe_sequence: int = probe_sequence,
+            finding_spec: dict[str, Any] = finding_spec,
+        ) -> list[dict[str, Any]]:
+            snap = fetch_budgeted(
+                request_url,
+                method,
+                request_headers,
+                probe_id=probe_id,
+                role=template_id,
+                detector=detector,
+                coverage_sequence=probe_sequence,
+                client_context=f"{probe_id}:template",
+            )
+            if snap is None:
+                return []
+            context = http_template_context(snap, variables)
+            if not http_template_matches(template, context, variables):
+                return []
+            evidence = extract_http_template_evidence(template, context)
+            evidence["template_id"] = template_id
+            return [
+                make_signal(
+                    detector,
+                    template_id,
+                    str(finding_spec["severity"]),
+                    str(finding_spec["confidence"]),
+                    str(finding_spec["title"]),
+                    evidence,
+                    snap,
+                    str(finding_spec.get("next_step", "")),
+                    save_body,
+                )
+            ]
+
+        add_task(f"template:{template_id}", detector, declarative_template_task)
 
     run_probe_tasks(probe_tasks)
 
