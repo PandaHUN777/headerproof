@@ -91,7 +91,7 @@ Implemented and verified:
 
 External distribution — active:
 - HeaderProof is already merged into `infoslack/awesome-web-hacking`; its description refresh is proposed separately.
-- Focused submissions are open for `vavkamil/awesome-bugbounty-tools`, `enaqx/awesome-pentest`, and `qazbnm456/awesome-web-security` after checking each repository's contribution model and category fit.
+- Focused submissions are open for `enaqx/awesome-pentest` and `qazbnm456/awesome-web-security`; `vavkamil/awesome-bugbounty-tools` PR #134 was closed without feedback and is not being duplicated.
 - Distribution deliberately avoids stale forks, unrelated catalogs, and PR-count spam.
 
 ## Acceptance rule

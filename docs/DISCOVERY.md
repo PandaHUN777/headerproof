@@ -27,8 +27,8 @@ Release notes describe shipped behavior and measured boundaries rather than road
 
 External distribution is tracked separately from scanner correctness:
 - `infoslack/awesome-web-hacking`: HeaderProof entry merged in PR #146; PR #148 refreshes the old developer-alpha description to the current released feature set.
-- `vavkamil/awesome-bugbounty-tools`: PR #134 proposes HeaderProof under Header Injection.
+- `vavkamil/awesome-bugbounty-tools`: PR #134 proposed HeaderProof under Header Injection and was closed by the maintainer without feedback; it is not being resubmitted as duplicate PR spam.
 - `enaqx/awesome-pentest`: PR #719 proposes HeaderProof under Web Vulnerability Scanners.
 - `qazbnm456/awesome-web-security`: PR #249 proposes HeaderProof through the repository's YAML-first Scanning data model; schema, generation, anchor, and automated format/reachability checks pass.
 
-These submissions are intentionally small, category-specific, and factual. Lists that only aggregate other awesome repositories, stale forks, or weakly related catalogs are not targeted merely to increase PR count.
+These submissions are intentionally small, category-specific, and factual. Lists that only aggregate other awesome repositories, stale forks, or weakly related catalogs are not targeted merely to increase PR count. `analysis-tools-dev/dynamic-analysis` is a future candidate only after HeaderProof meets its published minimums of six months of history, 20 GitHub stars, and more than one human contributor.
