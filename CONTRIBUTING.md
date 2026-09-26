@@ -91,11 +91,11 @@ Bounded engine primitives execute specialized multi-request flows (such as origi
 ```
 
 - **Matcher (`"canary-reflection"`)**: Evaluates raw exchange data to identify potential candidate signal. Satisfying the matcher records a technical candidate, but never emits a finding on its own.
-- **Extractor (`"injected-header-values"`, `"locations"`)**: Normalizes response data into structured evidence fields (e.g., populating `evidence.injected_header_seen`).
+- **Extractor (`"injected-header-values"`, `"locations"`)**: The `injected-header-values` extractor maps parsed `X-PA-Injected` response values to `evidence.injected_header_values`; `locations` records canary appearances in response headers and the response body. Separately, `analyze_crlf_probe()` sets `evidence.injected_header_seen` only when a parsed `X-PA-Injected` value exactly matches the canary.
 - **Evidence Gate (`"gate"`)**: Enforces proof invariants before candidate promotion.
   - **Observation vs. Promoted Finding**:
-    - **Technical Observation (`default_state: "observed"`)**: If the canary reflects in the body or query reflection without parsing a new response header, the gate fails. The result remains recorded in the evidence artifact as an observation (`missing_proof: ["parsed arbitrary header not proven"]`), preventing false-positive alerts.
-    - **Promoted Finding (`passed_state: "reproduced"`)**: Only when all gate conditions pass (here, `status_recorded` and `evidence.injected_header_seen` is truthy) is the candidate promoted to a verified finding (`reproduced` state).
+    - **Technical Observation (`default_state: "observed"`)**: If the canary appears in response headers or the response body but no parsed `X-PA-Injected` value exactly matches it, the gate fails. The result remains recorded as an observation (`missing_proof: ["parsed arbitrary header not proven"]`).
+    - **Promoted Finding (`passed_state: "reproduced"`)**: When the gate conditions pass, the state records technical reproduction only. Real victim/application impact remains unverified, as stated in `passed_missing_proof`.
 
 ### Generic HTTP template (Path 2)
 
