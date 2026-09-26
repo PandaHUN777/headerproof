@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .constants import PRODUCT_NAME, VERSION
+from .constants import PRODUCT_NAME, SCHEMA_VERSION, VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -68,7 +68,7 @@ def scan_config(args: argparse.Namespace) -> dict[str, Any]:
 
 def build_metadata(args: argparse.Namespace, input_path: str | Path, url_count: int) -> dict[str, Any]:
     return {
-        "schema_version": "1.2",
+        "schema_version": SCHEMA_VERSION,
         "run_id": uuid.uuid4().hex,
         "tool": PRODUCT_NAME,
         "version": VERSION,

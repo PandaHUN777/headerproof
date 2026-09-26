@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TextIO
 
-from .constants import PRODUCT_NAME, SEVERITY_ORDER, VERSION
+from .constants import PRODUCT_NAME, SCHEMA_VERSION, SEVERITY_ORDER, VERSION
 from .evidence import verification_template
 from .file_safety import atomic_write_text
 from .metadata import current_git_commit
@@ -112,7 +112,7 @@ class EvidenceWriter:
             self.out_dir / "checkpoint.json",
             json.dumps(
                 {
-                    "schema_version": self.metadata.get("schema_version", "1.2"),
+                    "schema_version": self.metadata.get("schema_version", SCHEMA_VERSION),
                     "run_id": self.metadata.get("run_id", ""),
                     "completed_urls": self.urls,
                     "last_completed_url": item.get("url", ""),
@@ -215,7 +215,7 @@ def write_outputs(
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     run_metadata = metadata or {
-        "schema_version": "1.2",
+        "schema_version": SCHEMA_VERSION,
         "run_id": "compat-write",
         "tool": PRODUCT_NAME,
         "version": VERSION,

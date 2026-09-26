@@ -1,0 +1,1 @@
+{"version": 2, "width": 110, "height": 8, "timestamp": 1790414979, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}\n[0.2, "o", "$ headerproof http://127.0.0.1:37297/demo -silent -severity high\\r\\n"]\n[0.8, "o", "[response_splitting_crlf_candidate] [high] [reproduced] http://127.0.0.1:37297/demo\\r\\n"]\n

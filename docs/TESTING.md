@@ -18,4 +18,12 @@ python -m ruff check src tests
 python -m mypy src/headerproof
 ```
 
-The integration suite includes origin/cache fixtures, timeout behavior, concurrency bounds, schema validation, and evidence serialization. Real Varnish/nginx/edge-cache fixtures and published precision/recall measurements remain tracked in the roadmap until the fixture matrix is reproducible in CI.
+## Cache fixture measurement
+
+The CI cache corpus runs the same vulnerable, keyed-safe, and `no-store` cases through real Varnish 7.7 and nginx 1.28 proxy caches.
+
+On 2026-09-26 the six-case corpus produced: TP=2, TN=4, FP=0, FN=0, precision=1.0, recall=1.0. These numbers describe only this controlled cache corpus; they are not a claim about arbitrary internet targets.
+
+Cloudflare and Fastly endpoints are supported by the integration harness through `HEADERPROOF_CLOUDFLARE_FIXTURE` and `HEADERPROOF_FASTLY_FIXTURE`, but no measurement is published until real controlled endpoints are configured.
+
+PortSwigger Academy and DVWA false-negative measurements remain separate from this cache corpus and must not be inferred from these numbers.
