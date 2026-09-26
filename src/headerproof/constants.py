@@ -16,7 +16,7 @@ CACHEABLE_STATUSES = {200, 203, 204, 206, 300, 301, 302, 404, 410}
 SEVERITY_ORDER = {"critical": 5, "high": 4, "medium": 3, "low": 2, "info": 1}
 CONFIDENCE_ORDER = {"high": 3, "medium": 2, "low": 1}
 PRODUCT_NAME = "HeaderProof"
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 SCHEMA_VERSION = "1.2"
 SUPPRESSED_BY_STRICT = {
     "cors_wildcard_origin",

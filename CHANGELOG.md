@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.1
+
+- Fixed the multi-architecture container build by installing the Linux binary inspection tool required by PyInstaller.
+- Added CA certificates to the minimal runtime image so HTTPS targets work from the published container.
+
 ## 1.4.0
 
 - Simplified the public CLI around positional/list/stdin targets, bounded concurrency, per-host rate limiting, severity filters, SARIF, and automatic `headerproof.yaml` configuration.
