@@ -55,7 +55,8 @@
         "kind": "origin-probe"
       },
       "matchers": [
-        "exact-origin-reflection"
+        "exact-origin-reflection",
+        "credentials-false"
       ],
       "extractors": [
         "acao",
@@ -412,7 +413,8 @@
         "kind": "header-probe"
       },
       "matchers": [
-        "canary-response-header"
+        "canary-response-header",
+        "security-header-missing"
       ],
       "extractors": [
         "locations"
@@ -630,7 +632,8 @@
         "kind": "cache-state-machine"
       },
       "matchers": [
-        "clean-follow-up-canary"
+        "clean-follow-up-canary",
+        "shared-cache-unconfirmed"
       ],
       "extractors": [
         "state-machine-checks"
@@ -736,7 +739,7 @@
         "kind": "crlf-query-probe"
       },
       "matchers": [
-        "parsed-injected-header"
+        "canary-reflection"
       ],
       "extractors": [
         "injected-header-values",

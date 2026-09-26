@@ -13,6 +13,61 @@ DEFAULT_TEMPLATE_BASE_URL = (
     "https://raw.githubusercontent.com/TayfurYldz/headerproof-templates/main/templates"
 )
 
+REQUEST_KINDS = {
+    "baseline",
+    "preflight",
+    "origin-probe",
+    "query-probe",
+    "header-probe",
+    "cache-state-machine",
+    "crlf-query-probe",
+    "header-oob-probe",
+}
+MATCHER_CONTEXT_KEYS = {
+    "exact-origin-reflection": "reflected",
+    "credentials-true": "credentials",
+    "credentials-false": "credentials_missing",
+    "acao-wildcard": "wildcard",
+    "origin-reflection": "reflected",
+    "cacheable": "cacheable",
+    "vary-origin-missing": "vary_origin_missing",
+    "cookie-samesite-missing": "samesite_missing",
+    "auth-cookie-cross-site": "auth_cookie_cross_site",
+    "auth-cookie": "auth_cookie",
+    "unsafe-methods": "unsafe_methods",
+    "samesite-none": "samesite_none",
+    "secure-missing": "secure_missing",
+    "canary-security-header": "security_header_hits",
+    "security-header-missing": "security_header_missing",
+    "canary-response-header": "header_hits",
+    "canary-text-body": "textual_body_hits",
+    "canary-reflection": "locations",
+    "cache-indicator": "cacheable",
+    "clean-follow-up-canary": "victim_locations",
+    "shared-cache-confirmed": "shared_cache_confirmed",
+    "shared-cache-unconfirmed": "shared_cache_unconfirmed",
+    "parsed-injected-header": "injected_header_seen",
+    "oob-callback-observed": "oob_confirmed",
+}
+EXTRACTOR_CONTEXT_KEYS = {
+    "acao": "access_control_allow_origin",
+    "acac": "credentials",
+    "methods": "unsafe_methods",
+    "cache-indicators": "cache_indicators",
+    "cookie-name": "cookie_name",
+    "likely-auth": "likely_auth_cookie",
+    "secure": "secure",
+    "samesite": "samesite",
+    "unsafe-methods": "unsafe_methods",
+    "cookie-names": "cookie_names",
+    "locations": "locations",
+    "state-machine-checks": "state_machine_checks",
+    "shared-cache-hit-markers": "shared_cache_hit_markers",
+    "injected-header-values": "injected_header_values",
+    "protocols": "protocols",
+    "event-count": "event_count",
+}
+
 
 class TemplateError(ValueError):
     pass
@@ -43,10 +98,19 @@ def validate_template(payload: dict[str, Any], source: str = "") -> dict[str, An
         raise TemplateError(f"{source}: template id must be a non-empty string")
     if not isinstance(payload["request"], dict):
         raise TemplateError(f"{source}: request must be an object")
+    request_kind = payload["request"].get("kind")
+    if request_kind not in REQUEST_KINDS:
+        raise TemplateError(f"{source}: unsupported request kind: {request_kind}")
     if not isinstance(payload["matchers"], list):
         raise TemplateError(f"{source}: matchers must be a list")
+    unknown_matchers = [item for item in payload["matchers"] if item not in MATCHER_CONTEXT_KEYS]
+    if unknown_matchers:
+        raise TemplateError(f"{source}: unknown matcher(s): {', '.join(map(str, unknown_matchers))}")
     if not isinstance(payload["extractors"], list):
         raise TemplateError(f"{source}: extractors must be a list")
+    unknown_extractors = [item for item in payload["extractors"] if item not in EXTRACTOR_CONTEXT_KEYS]
+    if unknown_extractors:
+        raise TemplateError(f"{source}: unknown extractor(s): {', '.join(map(str, unknown_extractors))}")
     assessment = payload["assessment"]
     if not isinstance(assessment, dict):
         raise TemplateError(f"{source}: assessment must be an object")
@@ -59,6 +123,47 @@ def validate_template(payload: dict[str, Any], source: str = "") -> dict[str, An
     if not isinstance(verification, dict) or "report_gate" not in verification:
         raise TemplateError(f"{source}: verification.report_gate is required")
     return payload
+
+
+def validate_template_document(payload: dict[str, Any], source: str = "") -> list[dict[str, Any]]:
+    entries = payload.get("templates", [payload])
+    if not isinstance(entries, list) or not entries:
+        raise TemplateError(f"{source}: templates must be a non-empty list")
+    validated: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise TemplateError(f"{source}: template entry must be an object")
+        validated.append(validate_template(entry, source))
+    return validated
+
+
+def template_matches(signal_type: str, context: dict[str, Any]) -> bool:
+    template = get_template(signal_type)
+    if template is None:
+        return False
+    matchers = template.get("matchers", [])
+    return bool(matchers) and all(bool(context.get(MATCHER_CONTEXT_KEYS[str(name)])) for name in matchers)
+
+
+def extract_template_evidence(signal_type: str, context: dict[str, Any]) -> dict[str, Any]:
+    template = get_template(signal_type)
+    if template is None:
+        return {}
+    evidence: dict[str, Any] = {}
+    for extractor in template.get("extractors", []):
+        key = EXTRACTOR_CONTEXT_KEYS[str(extractor)]
+        if key in context:
+            evidence[key] = context[key]
+    return evidence
+
+
+def templates_for_request(kind: str, checks: set[str] | None = None) -> list[dict[str, Any]]:
+    return [
+        template
+        for template in load_templates().values()
+        if template.get("request", {}).get("kind") == kind
+        and (checks is None or template.get("check") in checks)
+    ]
 
 
 def _iter_template_paths() -> list[Path]:
@@ -77,13 +182,7 @@ def load_templates() -> dict[str, dict[str, Any]]:
     loaded: dict[str, dict[str, Any]] = {}
     for path in _iter_template_paths():
         payload = _read_template_file(path)
-        entries = payload.get("templates", [payload])
-        if not isinstance(entries, list):
-            raise TemplateError(f"{path}: templates must be a list")
-        for entry in entries:
-            if not isinstance(entry, dict):
-                raise TemplateError(f"{path}: template entry must be an object")
-            template = validate_template(entry, str(path))
+        for template in validate_template_document(payload, str(path)):
             template_id = template["id"]
             if template_id in loaded:
                 raise TemplateError(f"duplicate template id: {template_id}")
@@ -172,7 +271,9 @@ def update_templates(base_url: str | None = None) -> tuple[int, Path]:
         except Exception as exc:
             raise TemplateError(f"failed to download {name}: {exc}") from exc
         payload = json.loads(raw.decode("utf-8"))
-        validate_template(payload, name)
+        if not isinstance(payload, dict):
+            raise TemplateError(f"{name}: template document must be an object")
+        validate_template_document(payload, name)
         (destination / name).write_bytes(raw)
         downloaded += 1
     reload_templates()

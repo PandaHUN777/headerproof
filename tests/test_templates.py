@@ -23,7 +23,8 @@ def test_bundled_templates_cover_proof_gates() -> None:
     assert cache is not None
     assert crlf is not None
     assert cache["request"]["kind"] == "cache-state-machine"
-    assert crlf["matchers"] == ["parsed-injected-header"]
+    assert crlf["matchers"] == ["canary-reflection"]
+    assert {item.get("path") for item in crlf["assessment"]["gate"]} >= {"evidence.injected_header_seen"}
 
 
 def test_condition_dsl_handles_nested_evidence() -> None:
@@ -59,3 +60,28 @@ def test_update_templates_from_manifest(tmp_path: Path, monkeypatch: pytest.Monk
 
     (destination / "core.yaml").unlink()
     reload_templates()
+
+
+def test_template_matchers_and_extractors_are_executable() -> None:
+    from headerproof.templates import extract_template_evidence, template_matches
+
+    context = {
+        "reflected": True,
+        "credentials": True,
+        "access_control_allow_origin": "https://probe.invalid",
+        "unsafe_methods": ["POST"],
+    }
+    assert template_matches("cors_arbitrary_origin_with_credentials", context) is True
+    assert extract_template_evidence("cors_arbitrary_origin_with_credentials", context) == {
+        "access_control_allow_origin": "https://probe.invalid",
+        "credentials": True,
+        "unsafe_methods": ["POST"],
+    }
+
+
+def test_template_document_accepts_bundled_multi_template_file() -> None:
+    from headerproof.templates import validate_template_document
+
+    payload = json.loads((Path(__file__).parents[1] / "src" / "headerproof" / "core.yaml").read_text())
+    validated = validate_template_document(payload, "core.yaml")
+    assert len(validated) >= 15
