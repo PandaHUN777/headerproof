@@ -26,6 +26,7 @@ Completed:
 - The separately versioned `headerproof-templates` repository is published and its current `core.yaml` matches the bundled template payload.
 - `-update-templates` was verified against the published manifest and validates downloaded templates before atomically replacing local files.
 - Regression coverage includes a template-only detector with a new check name that performs a canary probe and reaches `reproduced` without adding Python detector code.
+- Finding construction fails closed when a signal type has no validated template or when Python code disagrees with the template's declared check, preventing bounded probe primitives from silently introducing undeclared promotable detectors.
 
 ### Phase 3 — OOB and reproducible validation
 Implemented:
@@ -50,7 +51,7 @@ Completed and release-verified:
 - Published v1.4.1 GitHub Release with all five binaries, wheel, sdist, SHA-256 checksums, and a Sigstore/Cosign checksum signature bundle.
 - Binary-first `install.sh`; a clean latest-release Linux install passed checksum verification, `--version`, and `--help`.
 - Public multi-architecture linux/amd64 + linux/arm64 GHCR image. Anonymous registry-token and OCI-index retrieval verified both architectures for v1.4.1; the release workflow also keyless-signed the published image digest.
-- PyPI remains an optional secondary channel. Its Trusted Publishing job is implemented and safely disabled until a PyPI pending/trusted publisher is configured; the primary binary and official container distribution paths do not depend on it.
+- PyPI remains a secondary channel. A dedicated `publish-pypi.yml` workflow builds an exact release tag separately from the OIDC publish job, verifies distribution metadata against that tag, and supports both release-triggered and manual existing-tag publication. The one-time pending Trusted Publisher account setup is documented in `docs/PYPI.md`.
 
 Phase 4 is complete. The release binary is the primary installation path; PyPI is intentionally non-blocking.
 

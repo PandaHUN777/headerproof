@@ -19,6 +19,15 @@ def make_signal(
     next_step: str = "",
     save_body: bool = False,
 ) -> dict[str, Any]:
+    template = get_template(signal_type)
+    if template is None:
+        raise ValueError(f"detector signal type has no validated template: {signal_type}")
+    template_check = str(template.get("check", ""))
+    if template_check != check:
+        raise ValueError(
+            f"detector/template check mismatch for {signal_type}: code={check}, template={template_check}"
+        )
+
     signal: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "record_type": "finding",

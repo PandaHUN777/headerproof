@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Enforced the Phase 2 template boundary at finding construction: undeclared signal types and detector/template check mismatches now fail closed instead of becoming promotable findings.
+- Isolated PyPI Trusted Publishing into a dedicated OIDC workflow with exact-tag builds, version verification, and manual publication support for existing releases.
+
 ## 1.5.0
 
 - Hardened the Phase 5 CI contract with explicit stdout/stderr and exit-code regression coverage plus CI consumer documentation.

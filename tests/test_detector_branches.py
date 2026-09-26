@@ -359,12 +359,10 @@ def test_templates_make_signal_and_filter_branches() -> None:
     ):
         assert verification_template(signal_type)["report_gate"]
 
-    no_exchange = make_signal("test", "unknown", "info", "low", "title", {})
-    assert "exchange" not in no_exchange
-    assert no_exchange["submission_status"] == "manual_validation_required"
-    assert signal_passes_fp_filter(no_exchange, "all") is True
-    assert signal_passes_fp_filter(no_exchange, "strict") is False
-    assert signal_passes_fp_filter(no_exchange, "balanced") is False
+    with pytest.raises(ValueError, match="no validated template"):
+        make_signal("test", "unknown", "info", "low", "title", {})
+    with pytest.raises(ValueError, match="detector/template check mismatch"):
+        make_signal("wrong-check", "response_splitting_crlf_candidate", "high", "high", "title", {})
 
     def filter_signal(
         signal_type: str,
