@@ -2,11 +2,17 @@
 
 HeaderProof is intended for authorized security testing only.
 
+## Supported versions
+
+Security fixes target `main` and the latest published release line. Older release lines may receive a backport when the fix is low-risk, but they are not guaranteed ongoing security maintenance.
+
 ## Vulnerabilities in HeaderProof
 
 If you find a vulnerability in HeaderProof itself, use GitHub's private vulnerability reporting for this repository. Do not open a public issue before coordinated disclosure.
 
 Include the affected version or commit, impact, minimal reproduction, and any proposed mitigation. Remove third-party secrets and target data.
+
+Reports are handled on a best-effort basis without a promised response SLA. After validation, the maintainer will coordinate remediation and disclosure before public details are posted. Security reporters can be credited in the advisory and release notes if they want attribution; reporting a vulnerability alone does not imply code-contributor credit in `CONTRIBUTORS.md`.
 
 ## Scanner bugs
 

@@ -30,3 +30,10 @@ def test_maintainer_policy_preserves_external_authorship() -> None:
     assert "keep their original commit author" in text
     assert "first accepted contribution reaches `main`" in text
     assert "Use `Co-authored-by` only for actual co-authorship" in text
+
+
+def test_security_policy_separates_reporter_and_code_credit() -> None:
+    text = (ROOT / "SECURITY.md").read_text()
+    assert "latest published release line" in text
+    assert "without a promised response SLA" in text
+    assert "does not imply code-contributor credit" in text
