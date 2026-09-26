@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Updated reviewed CI/release actions to current Node 24-compatible releases and expanded `ci-*` release smoke tags to exercise the multi-architecture container build without publishing.
 - Hardened repository maintenance controls with immutable GitHub Action SHA pins, least-privilege CI permissions, Dependabot update policy, and pull-request dependency review.
 - Added a maintainer-governed contributor intake: Discussions, structured discussion forms, scoped issue routing, private vulnerability reporting, contributor/maintainer policy, and a curated `good first issue` / `help wanted` queue.
 

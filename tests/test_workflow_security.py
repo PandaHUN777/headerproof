@@ -43,3 +43,13 @@ def test_dependabot_tracks_actions_and_python_dependencies() -> None:
     text = (ROOT / ".github" / "dependabot.yml").read_text()
     assert "package-ecosystem: github-actions" in text
     assert "package-ecosystem: pip" in text
+
+
+
+def test_ci_release_tags_exercise_container_build_without_publishing() -> None:
+    text = (WORKFLOWS / "release.yml").read_text()
+    assert "startsWith(github.ref, 'refs/tags/ci-')" in text
+    assert "push: $" + "{{ startsWith(github.ref, 'refs/tags/v') }}" in text
+    assert "name: Verify cosign" in text
+    assert "linux/amd64,linux/arm64" in text
+    assert "|| 'linux/amd64'" in text
