@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,6 +26,8 @@ class SmokeHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    bin_cmd = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("HEADERPROOF_BIN", "headerproof")
+
     server = ThreadingHTTPServer(("127.0.0.1", 0), SmokeHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -31,13 +35,12 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="headerproof-release-smoke-") as raw_tmp:
             tmp = Path(raw_tmp)
             input_file = tmp / "urls.txt"
-            out_dir = tmp / "evidence"
             input_file.write_text(f"http://127.0.0.1:{server.server_port}/smoke\n")
-            env = dict(__import__("os").environ)
+            env = dict(os.environ)
             env["XDG_STATE_HOME"] = str(tmp / "state")
             completed = subprocess.run(
                 [
-                    "headerproof",
+                    bin_cmd,
                     "-l",
                     str(input_file),
                     "-c",
@@ -62,6 +65,30 @@ def main() -> int:
             for probe in result["probes"]:
                 if probe["status"] == "completed" and not isinstance(probe["exchange"], dict):
                     raise RuntimeError("installed scan wrote a null completed exchange")
+
+            # Verify invalid target error handling: documented exit code 2 and stderr message
+            invalid_run = subprocess.run(
+                [
+                    bin_cmd,
+                    "http://",
+                    "-c",
+                    "1",
+                    "-silent",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
+            )
+            if invalid_run.returncode != 2:
+                raise RuntimeError(
+                    f"invalid target expected exit code 2, got {invalid_run.returncode} (stderr={invalid_run.stderr!r})"
+                )
+            if "headerproof: invalid target: http://" not in invalid_run.stderr:
+                raise RuntimeError(
+                    f"invalid target expected 'headerproof: invalid target: http://' in stderr, got {invalid_run.stderr!r}"
+                )
     finally:
         server.shutdown()
         server.server_close()
