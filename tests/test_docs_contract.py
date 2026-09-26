@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DEMO = ROOT / "docs" / "headerproof-demo.cast"
 PROOF = ROOT / "docs" / "PROJECT_PROOF.md"
+DISCOVERY = ROOT / "docs" / "DISCOVERY.md"
 
 
 def test_readme_stays_short_and_keeps_factual_tool_roles() -> None:
@@ -49,3 +50,11 @@ def test_project_proof_does_not_mislabel_controlled_demo_as_real_finding() -> No
     assert "not presented as a real bug-bounty finding" in text
     assert "explicitly permitted program" in text
     assert "Do not convert a controlled fixture" in text
+
+
+def test_discovery_contract_keeps_contribution_and_external_scope_explicit() -> None:
+    text = DISCOVERY.read_text()
+    assert "8–10 open `good first issue`" in text
+    assert "avoid requiring access to private targets or secrets" in text
+    assert "Release notes describe shipped behavior" in text
+    assert "require explicit authorization for those external repositories" in text

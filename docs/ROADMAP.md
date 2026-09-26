@@ -82,14 +82,15 @@ Remaining external evidence:
 - Add one redacted real finding from an explicitly permitted program once disclosure/publication is allowed. No example will be fabricated, promoted from a fixture, or taken from an unverified target.
 
 ### Phase 7 — Discovery and contribution backlog
-Implemented:
-- GitHub topics include appsec, recon, and red-team.
-- Eight scoped good first issue tickets exist in this repository.
-- v1.4.0 release notes are prepared.
+Implemented and verified:
+- GitHub topics include appsec, recon, red-team, web-security, security-scanner, and detector-specific discovery terms.
+- The repository description is factual and avoids unmeasured speed/accuracy/noise claims.
+- Exactly eight scoped `good first issue` tickets are open, satisfying the 8–10 issue onboarding window; each has a bounded contributor task.
+- v1.4.0 and v1.4.1 are published releases and their live GitHub release bodies match the repository release notes.
+- `docs/DISCOVERY.md` documents the discovery metadata, starter-backlog contract, release-note rule, and the external-distribution boundary.
 
-Remaining:
-- External awesome-list pull requests require permission to modify repositories outside HeaderProof and are not performed under the current repository-only scope.
-- Publish final v1.4.0 release notes with the release.
+External distribution deferred by authorization boundary:
+- Pull requests to third-party awesome-bugbounty/awesome-pentest repositories are not performed under HeaderProof-only write authorization. They require explicit permission to modify those external repositories.
 
 ## Acceptance rule
 

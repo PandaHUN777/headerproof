@@ -6,6 +6,7 @@
 - Hash-locked published evidence schemas through `schemas/manifest.json` and added compatibility tests binding the runtime schema version to the immutable published file set.
 - Validated the independently versioned HeaderProof Action end to end against the published v1.4.1 binary; Action v1.0.0 now exposes the stable `v1` tag and preserves non-zero scanner exits.
 - Hardened Phase 6 project proof with a regression-tested asciinema contract, factual tool-scope documentation, contributor evidence rules, and a publication checklist that prevents controlled fixtures from being presented as real findings.
+- Verified Phase 7 discovery/contributor readiness: factual repository metadata, focused security topics, eight bounded good-first issues, and published v1.4.0/v1.4.1 release notes; third-party awesome-list submissions remain outside repository-only authorization.
 
 ## 1.4.1
 
