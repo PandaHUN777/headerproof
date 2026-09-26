@@ -30,6 +30,18 @@ A merge should leave the project easier to trust than before.
 
 Maintainers may ask for a PR to be split when independent changes can be reviewed and reverted separately.
 
+## Integration
+
+For an accepted external pull request, prefer a linear fast-forward integration of the exact reviewed contributor commits:
+
+1. The contributor rebases or updates the pull-request branch onto the current `main`.
+2. Required CI checks and maintainer review pass on that exact head.
+3. Verify locally that `main` is an ancestor of the reviewed pull-request head.
+4. Fast-forward that exact head to `main`; do not recreate the change as a maintainer-authored commit.
+5. Confirm GitHub records the pull request as merged and the contributor commit is reachable from the default branch.
+
+If the accepted change needs maintainer-only follow-up, keep that follow-up in a separate commit. Do not use branch-protection bypass as a substitute for review or green required checks.
+
 ## Labels
 
 - `good first issue`: newcomer-sized and ready to implement.

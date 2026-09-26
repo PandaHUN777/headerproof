@@ -30,6 +30,8 @@ def test_maintainer_policy_preserves_external_authorship() -> None:
     assert "keep their original commit author" in text
     assert "first accepted contribution reaches `main`" in text
     assert "Use `Co-authored-by` only for actual co-authorship" in text
+    assert "exact reviewed contributor commits" in text
+    assert "Fast-forward that exact head to `main`" in text
 
 
 def test_security_policy_separates_reporter_and_code_credit() -> None:
