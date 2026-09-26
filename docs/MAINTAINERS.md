@@ -58,7 +58,10 @@ If the accepted change needs maintainer-only follow-up, keep that follow-up in a
 - `community`: an external community contribution; it does not imply acceptance or merge readiness.
 - `enhancement`: accepted improvement; it does not by itself mean the task is ready for implementation.
 - `needs triage`: maintainer has not yet confirmed scope or priority.
+- `in progress`: accepted work currently has an active pull request and should not be advertised as available work.
 - `dependencies`, `ci`, and `release`: dependency, workflow, and distribution maintenance.
+
+When an active pull request takes a `good first issue` or `help wanted` task, remove that discovery label and add `in progress`. If the pull request closes without integration and the task is still wanted, restore the appropriate discovery label after re-triage. A merged pull request should close the linked issue rather than leave stale contributor work advertised.
 
 Labels describe project state; they are not a promise that every proposed change will be merged.
 

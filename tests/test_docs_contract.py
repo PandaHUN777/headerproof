@@ -69,6 +69,8 @@ def test_discovery_contract_keeps_contribution_and_external_scope_explicit() -> 
     assert "vavkamil/awesome-bugbounty-tools" in text
     assert "enaqx/awesome-pentest" in text
     assert "qazbnm456/awesome-web-security" in text
+    assert "up-for-grabs/up-for-grabs.net" in text
+    assert "remove discovery labels while an active pull request is in progress" in text
     assert "not targeted merely to increase PR count" in text
 
 
