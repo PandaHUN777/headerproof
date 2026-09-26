@@ -89,8 +89,10 @@ Implemented and verified:
 - v1.4.0 and v1.4.1 are published releases and their live GitHub release bodies match the repository release notes.
 - `docs/DISCOVERY.md` documents the discovery metadata, starter-backlog contract, release-note rule, and the external-distribution boundary.
 
-External distribution deferred by authorization boundary:
-- Pull requests to third-party awesome-bugbounty/awesome-pentest repositories are not performed under HeaderProof-only write authorization. They require explicit permission to modify those external repositories.
+External distribution — active:
+- HeaderProof is already merged into `infoslack/awesome-web-hacking`; its description refresh is proposed separately.
+- Focused submissions are open for `vavkamil/awesome-bugbounty-tools`, `enaqx/awesome-pentest`, and `qazbnm456/awesome-web-security` after checking each repository's contribution model and category fit.
+- Distribution deliberately avoids stale forks, unrelated catalogs, and PR-count spam.
 
 ## Acceptance rule
 

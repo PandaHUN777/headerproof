@@ -57,4 +57,7 @@ def test_discovery_contract_keeps_contribution_and_external_scope_explicit() -> 
     assert "8–10 open `good first issue`" in text
     assert "avoid requiring access to private targets or secrets" in text
     assert "Release notes describe shipped behavior" in text
-    assert "require explicit authorization for those external repositories" in text
+    assert "vavkamil/awesome-bugbounty-tools" in text
+    assert "enaqx/awesome-pentest" in text
+    assert "qazbnm456/awesome-web-security" in text
+    assert "not targeted merely to increase PR count" in text
