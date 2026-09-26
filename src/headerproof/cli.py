@@ -122,6 +122,7 @@ def parse_cli_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.no_crlf = False
     args.origin = list(config.get("origins", []))
     args.header = list(config.get("headers", []))
+    args.request_headers = dict(config.get("request_headers", {}))
     args.content_param = "pa_reflect"
     args.progress_every = 50
     args.quiet = bool(args.silent or args.json or args.sarif)

@@ -114,6 +114,9 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
             args.follow_redirects,
             args.delay,
         )
+        merged_headers = dict(getattr(args, "request_headers", {}))
+        merged_headers.update(headers or {})
+        request_headers = merged_headers or None
         context = client_context or f"{probe_id or role}-{coverage_sequence}"
         rate_limiter = getattr(args, "rate_limiter", None)
         if rate_limiter is not None:
@@ -123,7 +126,7 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
             snap = active_client.fetch(
                 request_url,
                 method,
-                headers,
+                request_headers,
                 timeout=budget.request_timeout(args.timeout),
                 client_context=context,
             )
@@ -132,7 +135,7 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
                 snap = active_client.fetch(
                     request_url,
                     method,
-                    headers,
+                    request_headers,
                     timeout=budget.request_timeout(args.timeout),
                     client_context=context,
                 )

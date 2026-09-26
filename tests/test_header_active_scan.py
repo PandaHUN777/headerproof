@@ -959,3 +959,49 @@ def test_invalid_headerproof_yaml_is_rejected(tmp_path: Path, monkeypatch: pytes
 
     with pytest.raises(SystemExit):
         header_active_scan.parse_cli_args(["example.com"])
+
+
+def test_headerproof_yaml_request_headers_are_applied_and_redacted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "headerproof.yaml").write_text(
+        "request_headers:\n"
+        "  Cookie: session=secret-value\n"
+        "  Authorization: 'Bearer test-token'\n"
+    )
+    args = header_active_scan.parse_cli_args(["example.com"])
+    assert args.request_headers == {
+        "Cookie": "session=secret-value",
+        "Authorization": "Bearer test-token",
+    }
+
+    metadata = header_active_scan.build_metadata(args, tmp_path / "input.txt", 1)
+    encoded = json.dumps(metadata)
+    assert metadata["config"]["request_headers_count"] == 2
+    assert "secret-value" not in encoded
+    assert "test-token" not in encoded
+
+
+def test_scan_applies_configured_request_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict[str, str]] = []
+
+    def fake_fetch(self, url, method="GET", headers=None, timeout=None, client_context="default"):
+        seen.append(dict(headers or {}))
+        return make_snapshot(
+            {"Content-Type": "text/plain", "Cache-Control": "no-store"},
+            request_url=url,
+            request_headers=headers,
+            client_context=client_context,
+        )
+
+    monkeypatch.setattr(header_active_scan.HttpClient, "fetch", fake_fetch)
+    args = header_active_scan.parse_cli_args(["https://example.com/"])
+    args.enabled_checks = set()
+    args.request_headers = {"Cookie": "session=fixture", "Authorization": "Bearer fixture"}
+    args.no_live_alerts = True
+
+    result = header_active_scan.scan_url("https://example.com/", args)
+
+    assert result["status"] == "scanned"
+    assert seen == [{"Cookie": "session=fixture", "Authorization": "Bearer fixture"}]
