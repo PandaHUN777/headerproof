@@ -29,6 +29,76 @@ Detector definitions belong in the separately distributed `headerproof-templates
 1. Use an existing bounded primitive (`baseline`, `preflight`, `origin-probe`, `query-probe`, `header-probe`, `cache-state-machine`, `crlf-query-probe`, or `header-oob-probe`) when the detector needs HeaderProof's specialized multi-request evidence logic.
 2. Use `request.kind: http` for a new same-target detector that can be expressed as a safe `GET`, `HEAD`, or `OPTIONS` request. `headers` and `query` accept `{{canary}}`, `{{hostname}}`, and `{{url}}` variables, so adding this class of detector does not require Python changes.
 
+### Bounded primitive template (Path 1)
+
+Bounded engine primitives execute specialized multi-request flows (such as origin reflection checks, cache state transitions, or CRLF injections). The declarative template defines bounded matchers, extractors, and an evidence gate matching `src/headerproof/core.yaml`:
+
+```json
+{
+  "id": "response_splitting_crlf_candidate",
+  "check": "header-injection",
+  "request": {
+    "kind": "crlf-query-probe"
+  },
+  "matchers": [
+    "canary-reflection"
+  ],
+  "extractors": [
+    "injected-header-values",
+    "locations"
+  ],
+  "assessment": {
+    "default_state": "observed",
+    "gate": [
+      {
+        "op": "status_recorded"
+      },
+      {
+        "op": "truthy",
+        "path": "evidence.injected_header_seen"
+      }
+    ],
+    "gate_checks": {
+      "response_recorded": {
+        "op": "status_recorded"
+      }
+    },
+    "reasons": [
+      "CRLF canary reflected but parsed injected header not observed"
+    ],
+    "missing_proof": [
+      "parsed arbitrary header not proven"
+    ],
+    "passed_state": "reproduced",
+    "passed_reasons": [
+      "CRLF probe produced a parsed response header"
+    ],
+    "passed_missing_proof": [
+      "real victim impact remains unverified"
+    ]
+  },
+  "verification": {
+    "objective": "Validate the technical observation independently.",
+    "automated_checks": [
+      "Record the exact request and response evidence."
+    ],
+    "manual_confirmation": [
+      "Repeat on an authorized target with independent confirmation."
+    ],
+    "report_gate": "Require independent technical and impact validation before reporting."
+  }
+}
+```
+
+- **Matcher (`"canary-reflection"`)**: Evaluates raw exchange data to identify potential candidate signal. Satisfying the matcher records a technical candidate, but never emits a finding on its own.
+- **Extractor (`"injected-header-values"`, `"locations"`)**: Normalizes response data into structured evidence fields (e.g., populating `evidence.injected_header_seen`).
+- **Evidence Gate (`"gate"`)**: Enforces proof invariants before candidate promotion.
+  - **Observation vs. Promoted Finding**:
+    - **Technical Observation (`default_state: "observed"`)**: If the canary reflects in the body or query reflection without parsing a new response header, the gate fails. The result remains recorded in the evidence artifact as an observation (`missing_proof: ["parsed arbitrary header not proven"]`), preventing false-positive alerts.
+    - **Promoted Finding (`passed_state: "reproduced"`)**: Only when all gate conditions pass (here, `status_recorded` and `evidence.injected_header_seen` is truthy) is the candidate promoted to a verified finding (`reproduced` state).
+
+### Generic HTTP template (Path 2)
+
 A generic HTTP template defines condition-object `matchers`, path-based `extractors`, finding metadata, and an independent `assessment.gate`. The matcher decides whether an observation exists; the gate decides whether it can become a finding.
 
 ```json
