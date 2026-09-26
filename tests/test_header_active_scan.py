@@ -494,6 +494,35 @@ def test_main_json_stream_and_metadata(tmp_path: Path, capsys, monkeypatch: pyte
         server.server_close()
 
 
+def test_main_sarif_keeps_machine_output_on_stdout_and_logs_on_stderr(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), ScannerFixtureHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        state_home = tmp_path / "state"
+        monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+        url = f"http://127.0.0.1:{server.server_port}/demo"
+
+        rc = header_active_scan.main_from_args([url, "-c", "1", "-sarif"])
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+
+        assert rc == 1
+        assert payload["version"] == "2.1.0"
+        assert payload["runs"][0]["tool"]["driver"]["name"] == "HeaderProof"
+        assert payload["runs"][0]["results"]
+        assert "headerproof: input=" in captured.err
+        assert "HeaderProof" not in captured.err
+        assert not any(line.startswith("[") for line in captured.err.splitlines())
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_scan_timeout_keeps_batch_moving(tmp_path: Path) -> None:
     server = ThreadingHTTPServer(("127.0.0.1", 0), ScannerFixtureHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

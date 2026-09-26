@@ -55,33 +55,44 @@ Completed and release-verified:
 Phase 4 is complete. The release binary is the primary installation path; PyPI is intentionally non-blocking.
 
 ### Phase 5 — CI consumption
-Implemented:
-- stdout findings / stderr operational logs.
-- SARIF 2.1.0 export.
-- Exit codes: no finding 0, finding 1, scan error 2.
-- Independently versioned evidence schema compatibility policy.
 
-Remaining:
-- Publish the separately versioned headerproof-action repository. This is outside work scoped only to this repository.
+#### Phase 5A — CLI/CI contract — complete
+- Findings/machine output stay on stdout; operational logs stay on stderr.
+- SARIF 2.1.0 export is available on stdout and as `.sarif` output.
+- Stable exit codes: no finding 0, finding 1, scan error 2; operator interrupt 130.
+- Contract regression tests cover SARIF stream separation and exit-code precedence.
+- `docs/CI.md` documents shell/CI consumption without coupling policy to the scanner.
+
+#### Phase 5B — Action and evidence compatibility — complete
+- Published evidence schemas are hash-locked in `schemas/manifest.json`; tests bind the runtime `SCHEMA_VERSION` to the manifest and reject in-place edits or untracked schema files.
+- Evidence schema v1.2 is unchanged across HeaderProof v1.4.0 and v1.4.1, proving scanner releases can advance independently from the evidence contract.
+- HeaderProof Action v1.0.0 is independently versioned with the stable `v1` major tag.
+- Action E2E CI installs the published HeaderProof v1.4.1 binary and verifies controlled no-finding (`0`) and reproduced-finding (`1`) SARIF paths.
+- The action preserves scan error (`2`) and other non-zero process exits instead of silently converting them to success.
 
 ### Phase 6 — Project proof and contributor path
 Implemented:
-- Short asciinema terminal recording.
-- Factual role comparison with Nuclei, Corsy, and ffuf.
-- Concrete template contribution guide.
+- Short asciinema v2 terminal recording backed by a controlled localhost fixture and a regression test for the compact output contract.
+- Factual, non-ranking role comparison with Nuclei, Corsy, and ffuf.
+- Concrete template contribution guide plus documentation-evidence rules separating fixtures, known-vulnerable labs, and real findings.
+- `docs/PROJECT_PROOF.md` records the reproducible demo boundary and the minimum evidence/publication checklist for a future real-world case study.
+- Documentation contract tests keep the README at 40 lines or fewer and prevent the controlled demo from being mislabeled as a real finding.
 
-Remaining:
-- Add one redacted real finding from an explicitly permitted program. No example will be fabricated or taken from an unverified target.
+Remaining external evidence:
+- Add one redacted real finding from an explicitly permitted program once disclosure/publication is allowed. No example will be fabricated, promoted from a fixture, or taken from an unverified target.
 
 ### Phase 7 — Discovery and contribution backlog
-Implemented:
-- GitHub topics include appsec, recon, and red-team.
-- Eight scoped good first issue tickets exist in this repository.
-- v1.4.0 release notes are prepared.
+Implemented and verified:
+- GitHub topics include appsec, recon, red-team, web-security, security-scanner, and detector-specific discovery terms.
+- The repository description is factual and avoids unmeasured speed/accuracy/noise claims.
+- Exactly eight scoped `good first issue` tickets are open, satisfying the 8–10 issue onboarding window; each has a bounded contributor task.
+- v1.4.0 and v1.4.1 are published releases and their live GitHub release bodies match the repository release notes.
+- `docs/DISCOVERY.md` documents the discovery metadata, starter-backlog contract, release-note rule, and the external-distribution boundary.
 
-Remaining:
-- External awesome-list pull requests require permission to modify repositories outside HeaderProof and are not performed under the current repository-only scope.
-- Publish final v1.4.0 release notes with the release.
+External distribution — active:
+- HeaderProof is already merged into `infoslack/awesome-web-hacking`; its description refresh is proposed separately.
+- Focused submissions are open for `enaqx/awesome-pentest` and `qazbnm456/awesome-web-security`; `vavkamil/awesome-bugbounty-tools` PR #134 was closed without feedback and is not being duplicated.
+- Distribution deliberately avoids stale forks, unrelated catalogs, and PR-count spam.
 
 ## Acceptance rule
 

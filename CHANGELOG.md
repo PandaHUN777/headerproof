@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+## 1.5.0
+
+- Hardened the Phase 5 CI contract with explicit stdout/stderr and exit-code regression coverage plus CI consumer documentation.
+- Hash-locked published evidence schemas through `schemas/manifest.json` and added compatibility tests binding the runtime schema version to the immutable published file set.
+- Validated the independently versioned HeaderProof Action end to end against the published v1.4.1 binary; Action v1.0.0 now exposes the stable `v1` tag and preserves non-zero scanner exits.
+- Hardened Phase 6 project proof with a regression-tested asciinema contract, factual tool-scope documentation, contributor evidence rules, and a publication checklist that prevents controlled fixtures from being presented as real findings.
+- Verified Phase 7 discovery/contributor readiness: factual repository metadata, focused security topics, eight bounded good-first issues, and published v1.4.0/v1.4.1 release notes.
+- Expanded GitHub discovery topics for DAST, vulnerability-scanner, SARIF, DevSecOps, HTTP security, and security testing, and opened focused external-list submissions after explicit authorization; existing awesome-web-hacking placement is retained and refreshed.
+
 ## 1.4.1
 
 - Fixed the multi-architecture container build by installing the Linux binary inspection tool required by PyInstaller.

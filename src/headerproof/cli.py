@@ -38,6 +38,12 @@ DEFAULT_PER_URL_CONCURRENCY = 4
 DEFAULT_HEADER_PROBE_LIMIT = 5
 VALID_SEVERITIES = {"low", "medium", "high", "critical", "info"}
 
+# Stable process contract for shells and CI consumers.
+EXIT_CLEAN = 0
+EXIT_FINDINGS = 1
+EXIT_SCAN_ERROR = 2
+EXIT_INTERRUPTED = 130
+
 
 def parse_severity(raw: str) -> set[str]:
     values = {item.strip().lower() for item in raw.split(",") if item.strip()}
@@ -175,12 +181,12 @@ def _payload_count(payload: dict[str, object], key: str) -> int:
 
 def _result_exit_code(payload: dict[str, object], interrupted: bool) -> int:
     if interrupted:
-        return 130
+        return EXIT_INTERRUPTED
     if _payload_count(payload, "error") or _payload_count(payload, "partial_error"):
-        return 2
+        return EXIT_SCAN_ERROR
     if _payload_count(payload, "verified_technical_signals"):
-        return 1
-    return 0
+        return EXIT_FINDINGS
+    return EXIT_CLEAN
 
 
 def main_from_args(argv: list[str] | None = None) -> int:
@@ -191,21 +197,21 @@ def main_from_args(argv: list[str] | None = None) -> int:
             count, destination = update_templates()
         except TemplateError as exc:
             print(f"headerproof: {exc}", file=sys.stderr)
-            return 2
+            return EXIT_SCAN_ERROR
         print(f"headerproof: updated {count} template file(s) in {destination}", file=sys.stderr)
-        return 0
+        return EXIT_CLEAN
 
     try:
         out_dir = reserve_output_dir()
         url_iter, input_label = _input_stream(args, out_dir)
     except (FileNotFoundError, ValueError, OSError) as exc:
         print(f"headerproof: {exc}", file=sys.stderr)
-        return 2
+        return EXIT_SCAN_ERROR
 
     first_url = next(url_iter, None)
     if not first_url:
         print("headerproof: no usable URLs found", file=sys.stderr)
-        return 2
+        return EXIT_SCAN_ERROR
 
     metadata = build_metadata(args, input_label, 0)
     writer = EvidenceWriter(out_dir, metadata)
@@ -298,7 +304,7 @@ def main_from_args(argv: list[str] | None = None) -> int:
             export_findings(out_dir, Path(args.output).expanduser())
         except (OSError, ValueError) as exc:
             print(f"headerproof: cannot write output: {exc}", file=sys.stderr)
-            return 2
+            return EXIT_SCAN_ERROR
 
     if args.sarif:
         print(json.dumps(sarif_payload(read_findings(out_dir)), indent=2, sort_keys=True))

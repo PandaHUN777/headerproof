@@ -48,6 +48,10 @@ Keep `missing_proof` explicit. Technical reproduction must not be described as v
 
 Add a focused test in `tests/test_templates.py`. A new generic HTTP detector must prove that it works without adding Python detector code.
 
+## Documentation evidence
+
+Keep controlled fixtures, known-vulnerable labs, and real-world findings clearly separated. A real finding example requires an explicitly permitted program and enough redacted request/response evidence to support the stated HeaderProof finding type and evidence state. Do not present synthetic or unverified targets as real findings. See `docs/PROJECT_PROOF.md` for the publication checklist.
+
 ## Local checks
 ```bash
 python3 -m compileall -q header_active_scan.py src/headerproof
