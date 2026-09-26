@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Hardened repository maintenance controls with immutable GitHub Action SHA pins, least-privilege CI permissions, Dependabot update policy, and pull-request dependency review.
 - Added a maintainer-governed contributor intake: Discussions, structured discussion forms, scoped issue routing, private vulnerability reporting, contributor/maintainer policy, and a curated `good first issue` / `help wanted` queue.
 
 - Enforced the Phase 2 template boundary at finding construction: undeclared signal types and detector/template check mismatches now fail closed instead of becoming promotable findings.
