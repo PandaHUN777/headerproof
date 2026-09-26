@@ -5,6 +5,7 @@
 - Hardened the Phase 5 CI contract with explicit stdout/stderr and exit-code regression coverage plus CI consumer documentation.
 - Hash-locked published evidence schemas through `schemas/manifest.json` and added compatibility tests binding the runtime schema version to the immutable published file set.
 - Validated the independently versioned HeaderProof Action end to end against the published v1.4.1 binary; Action v1.0.0 now exposes the stable `v1` tag and preserves non-zero scanner exits.
+- Hardened Phase 6 project proof with a regression-tested asciinema contract, factual tool-scope documentation, contributor evidence rules, and a publication checklist that prevents controlled fixtures from being presented as real findings.
 
 ## 1.4.1
 

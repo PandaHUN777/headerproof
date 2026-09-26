@@ -72,12 +72,14 @@ Phase 4 is complete. The release binary is the primary installation path; PyPI i
 
 ### Phase 6 — Project proof and contributor path
 Implemented:
-- Short asciinema terminal recording.
-- Factual role comparison with Nuclei, Corsy, and ffuf.
-- Concrete template contribution guide.
+- Short asciinema v2 terminal recording backed by a controlled localhost fixture and a regression test for the compact output contract.
+- Factual, non-ranking role comparison with Nuclei, Corsy, and ffuf.
+- Concrete template contribution guide plus documentation-evidence rules separating fixtures, known-vulnerable labs, and real findings.
+- `docs/PROJECT_PROOF.md` records the reproducible demo boundary and the minimum evidence/publication checklist for a future real-world case study.
+- Documentation contract tests keep the README at 40 lines or fewer and prevent the controlled demo from being mislabeled as a real finding.
 
-Remaining:
-- Add one redacted real finding from an explicitly permitted program. No example will be fabricated or taken from an unverified target.
+Remaining external evidence:
+- Add one redacted real finding from an explicitly permitted program once disclosure/publication is allowed. No example will be fabricated, promoted from a fixture, or taken from an unverified target.
 
 ### Phase 7 — Discovery and contribution backlog
 Implemented:
