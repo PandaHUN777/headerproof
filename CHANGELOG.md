@@ -5,8 +5,9 @@
 - Simplified the public CLI around positional/list/stdin targets, bounded concurrency, per-host rate limiting, severity filters, SARIF, and automatic `headerproof.yaml` configuration.
 - Replaced terminal cards and banner-style output with grep-friendly finding lines and strict stdout/stderr separation.
 - Added declarative detector request/matcher/extractor/evidence-gate templates, a safe generic HTTP template executor for adding same-target detector classes without Python detector changes, and the independently published `headerproof-templates` update channel.
-- Added DNS/HTTP OOB callback confirmation for blind header interactions.
-- Added real Varnish and nginx cache fixtures with reproducible precision/recall artifacts; the controlled six-case corpus currently records TP=2, TN=4, FP=0, FN=0.
+- Added DNS/HTTP OOB callback confirmation for blind header interactions, including an end-to-end scanner-to-callback proof regression.
+- Added real Varnish and nginx cache fixtures with reproducible precision/recall artifacts; the controlled six-case corpus currently records TP=2, TN=4, FP=0, FN=0. Added provider-aware Fastly/Cloudflare cache-hit semantics and provider-fingerprint validation for external CDN measurements.
+- Added an isolated official DVWA low-CSRF measurement; the form-token case currently records FN=1 and detection recall=0.0 rather than crediting an unrelated SameSite observation.
 - Added independently versioned evidence-schema compatibility policy, SARIF export, CI `0/1/2` exit semantics, and the separate `headerproof-action` integration repository.
 - Added one-file binary builds for Linux amd64/arm64, macOS amd64/arm64, and Windows amd64; the release matrix is smoke-tested on native GitHub runners.
 - Added checksum/signature release steps, binary-first installer behavior, PyPI publishing, and multi-architecture container publishing workflows.

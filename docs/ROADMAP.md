@@ -29,16 +29,17 @@ Completed:
 
 ### Phase 3 — OOB and reproducible validation
 Implemented:
-- Self-hosted DNS/HTTP OOB callbacks and proof-gated OOB findings.
+- Self-hosted DNS/HTTP OOB callbacks and proof-gated OOB findings, including an end-to-end scanner -> target -> callback -> finding regression test.
 - Real Varnish and nginx cache fixtures.
-- Reproducible controlled cache measurements.
-- Authorized known-vulnerable-lab recall harness with optional authenticated request headers.
+- Reproducible controlled cache measurements with provider-specific cache-hit semantics.
+- Cloudflare/Fastly fixture inputs with provider-fingerprint validation so an arbitrary endpoint cannot be mislabeled as a CDN measurement.
+- Authorized known-vulnerable-lab recall harness plus an isolated official DVWA low-CSRF measurement in CI.
 
 Measured controlled cache corpus on 2026-09-26: TP=2, TN=4, FP=0, FN=0, precision=1.0, recall=1.0.
+Measured DVWA low-CSRF case on 2026-09-26: expected=1, detected=0, FN=1, detection recall=0.0. The existing SameSite observation is not credited as proof of the missing form token.
 
 Remaining:
-- Run and publish measurements for controlled Cloudflare and Fastly endpoints.
-- Run the known-vulnerable recall harness against authorized PortSwigger Academy and/or DVWA cases. Do not infer those results from the cache corpus.
+- Run and publish measurements for controlled Cloudflare and Fastly endpoints. The harness is ready, but no controlled provider endpoints or credentials are configured in this repository.
 
 ### Phase 4 — Distribution
 Implemented:

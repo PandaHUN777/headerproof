@@ -79,3 +79,62 @@ def test_oob_signal_passes_template_gate() -> None:
     assert signals[0]["type"] == "blind_header_oob_confirmed"
     assert signals[0]["assessment"]["technical_gate"] == "passed"
     assert signals[0]["assessment"]["state"] == "cross_request_confirmed"
+
+
+def test_engine_oob_probe_reaches_callback_and_promotes_finding() -> None:
+    from headerproof.cli import parse_cli_args
+    from headerproof.engine import scan_url
+
+    store = OOBEventStore()
+    oob = ThreadingHTTPServer(("127.0.0.1", 0), _http_handler(store))
+    oob_thread = threading.Thread(target=oob.serve_forever, daemon=True)
+    oob_thread.start()
+    api_base = f"http://127.0.0.1:{oob.server_port}"
+
+    class TargetHandler(__import__("http.server").server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            forwarded = self.headers.get("X-Forwarded-Host", "")
+            token = forwarded.split(".", 1)[0] if forwarded.endswith(".oob.local") else ""
+            if token:
+                with request.urlopen(f"{api_base}/c/{token}", timeout=1) as response:
+                    assert response.status == 200
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def do_OPTIONS(self) -> None:  # noqa: N802
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, _format: str, *args: object) -> None:
+            return
+
+    target = ThreadingHTTPServer(("127.0.0.1", 0), TargetHandler)
+    target_thread = threading.Thread(target=target.serve_forever, daemon=True)
+    target_thread.start()
+    url = f"http://127.0.0.1:{target.server_port}/"
+    try:
+        args = parse_cli_args([url])
+        args.enabled_checks = {"header-injection"}
+        args.header_probe_limit = 1
+        args.per_url_concurrency = 1
+        args.concurrency = 1
+        args.oob_api = api_base
+        args.oob_domain = "oob.local"
+        args.oob_wait = 1.0
+        args.no_live_alerts = True
+        result = scan_url(url, args)
+    finally:
+        target.shutdown()
+        target.server_close()
+        oob.shutdown()
+        oob.server_close()
+        target_thread.join(timeout=2)
+        oob_thread.join(timeout=2)
+
+    findings = [item for item in result["signals"] if item["type"] == "blind_header_oob_confirmed"]
+    assert len(findings) == 1
+    assert findings[0]["assessment"]["technical_gate"] == "passed"
+    assert findings[0]["assessment"]["state"] == "cross_request_confirmed"
+    assert findings[0]["evidence"]["oob_confirmed"] is True
