@@ -15,7 +15,7 @@
 - Added an isolated official DVWA low-CSRF measurement; the form-token case currently records FN=1 and detection recall=0.0 rather than crediting an unrelated SameSite observation.
 - Added independently versioned evidence-schema compatibility policy, SARIF export, CI `0/1/2` exit semantics, and the separate `headerproof-action` integration repository.
 - Added one-file binary builds for Linux amd64/arm64, macOS amd64/arm64, and Windows amd64; the release matrix is smoke-tested on native GitHub runners.
-- Added checksum/signature release steps, binary-first installer behavior, PyPI publishing, and multi-architecture container publishing workflows.
+- Added checksum/signature release steps, binary-first installer behavior, an optional gated PyPI Trusted Publishing path, and public multi-architecture container publishing.
 - Reduced README to the command path, verified output meaning, a terminal recording, and a short tool-scope comparison.
 
 ## 1.3.2

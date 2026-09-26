@@ -7,6 +7,7 @@ It prints findings only after a detector-specific technical proof gate passes. R
 ## Install
 ```bash
 curl -fsSL https://raw.githubusercontent.com/TayfurYldz/headerproof/main/install.sh | sh
+docker run --rm ghcr.io/tayfuryldz/headerproof:latest --version
 ```
 
 ## Run
