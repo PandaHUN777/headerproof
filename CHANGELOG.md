@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added structured GitHub Discussion forms for Ideas, General feedback, and Q&A so community input arrives with enough context to triage safely.
 - Pinned Docker build/runtime base images by digest and removed the unnecessary unpinned pip self-upgrade from the container build; linked private vulnerability reporting directly from the security policy.
 - Added immutable future releases, release-artifact and container provenance attestations, consumer verification guidance, a release-maintainer checklist, editor defaults, and richer package metadata for documentation and security reporting.
 - Added a maintainer-grade contributor credit contract: accepted external work preserves authorship, is recorded in `CONTRIBUTORS.md`, and is credited in the release that first ships it; release-note drafting excludes automation from human contributor credit.

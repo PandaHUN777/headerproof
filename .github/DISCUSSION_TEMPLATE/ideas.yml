@@ -4,28 +4,37 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ideas are design conversations, not implementation assignments. A maintainer may convert an accepted, scoped proposal into an issue.
+        Ideas are design conversations, not implementation assignments. HeaderProof prioritizes evidence quality and false-positive resistance over detector count. A maintainer may convert an accepted, scoped proposal into an issue.
   - type: textarea
     id: problem
     attributes:
-      label: Problem
+      label: Problem or use case
       description: What concrete user or evidence-quality problem should HeaderProof solve?
+      placeholder: Describe the behavior or workflow, not a live target.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
       label: Proposed direction
-      description: Describe the behavior, not just an implementation.
+      description: Describe the desired behavior, not just an implementation.
     validations:
       required: true
   - type: textarea
     id: proof
     attributes:
       label: Evidence and false-positive boundary
-      description: What observation would justify a finding, and what must not be promoted?
+      description: What minimum observation would justify a finding, and what must not be promoted?
     validations:
       required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Controlled reproduction
+      description: How could the positive and negative cases be tested safely?
+      placeholder: A local fixture, intentionally vulnerable lab, or other permitted environment is ideal.
+    validations:
+      required: false
   - type: textarea
     id: safety
     attributes:
@@ -36,7 +45,9 @@ body:
   - type: checkboxes
     id: expectations
     attributes:
-      label: Contribution
+      label: Before implementation
       options:
         - label: I understand an idea is not accepted work until a maintainer scopes it into an issue.
+          required: true
+        - label: I have not included secrets, unauthorized target details, or vulnerability data I am not permitted to disclose.
           required: true

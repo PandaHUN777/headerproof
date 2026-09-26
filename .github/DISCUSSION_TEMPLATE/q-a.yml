@@ -1,5 +1,17 @@
-title: "[Question] "
+title: "[Q&A] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Use Q&A when you need help using HeaderProof. For a confirmed reproducible implementation defect, open an issue instead.
+  - type: input
+    id: version
+    attributes:
+      label: HeaderProof version
+      description: Output of `headerproof --version` when available.
+      placeholder: "HeaderProof 1.5.0"
+    validations:
+      required: false
   - type: textarea
     id: goal
     attributes:
@@ -8,23 +20,24 @@ body:
     validations:
       required: true
   - type: textarea
+    id: command
+    attributes:
+      label: Minimal command or workflow
+      description: Redact target names and secrets when needed.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
     id: tried
     attributes:
-      label: What have you tried?
-      description: Include sanitized commands or output when useful.
+      label: What happened and what have you tried?
+      description: Include the smallest useful stdout/stderr excerpt when relevant. Do not include secrets.
     validations:
-      required: false
-  - type: input
-    id: version
-    attributes:
-      label: HeaderProof version
-      placeholder: v1.5.0 or commit SHA
-    validations:
-      required: false
+      required: true
   - type: checkboxes
     id: safety
     attributes:
-      label: Safety
+      label: Safe disclosure
       options:
-        - label: I will not post credentials, private URLs, or third-party exploit evidence.
+        - label: I have not included credentials, private URLs, unauthorized target details, or vulnerability data I am not permitted to disclose.
           required: true

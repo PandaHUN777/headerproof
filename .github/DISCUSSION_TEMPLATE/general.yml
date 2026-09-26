@@ -1,34 +1,52 @@
-title: "[Contribution] "
+title: "[General] "
 body:
   - type: markdown
     attributes:
       value: |
-        Use this form for contribution plans that are not already covered by an accepted issue. For feature/detector proposals, use Ideas instead.
-  - type: textarea
-    id: change
+        Use General for workflow feedback, contribution plans, and broader project conversation. For detector or feature proposals, use Ideas instead.
+  - type: dropdown
+    id: area
     attributes:
-      label: Proposed contribution
-      description: What would you like to change and why?
+      label: Area
+      options:
+        - Contribution plan
+        - CLI and output
+        - Detector or evidence behavior
+        - Templates
+        - OOB workflow
+        - CI or SARIF integration
+        - Installation or releases
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: topic
+    attributes:
+      label: What would you like to discuss?
+      description: Describe the friction, contribution, or project question with enough context to act on it.
     validations:
       required: true
   - type: textarea
     id: scope
     attributes:
-      label: Intended scope
-      description: List the files/components you expect to touch and what is explicitly out of scope.
+      label: Intended scope or outcome
+      description: For contribution plans, list the components you expect to touch and what is out of scope. For feedback, describe the concrete outcome that would improve the workflow.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: validation
     attributes:
-      label: Validation plan
-      description: How will the change be tested?
+      label: Validation or reproduction
+      description: If applicable, explain how the change or behavior can be tested safely.
     validations:
-      required: true
+      required: false
   - type: checkboxes
     id: expectations
     attributes:
-      label: Before coding
+      label: Before posting
       options:
         - label: I will wait for maintainer scope confirmation before starting a large change.
+          required: true
+        - label: I have not included secrets, unauthorized target details, or vulnerability data I am not permitted to disclose.
           required: true
