@@ -32,16 +32,16 @@ Verify a downloaded artifact:
 
 ```bash
 gh attestation verify ./headerproof-linux-amd64 \
-  -R TayfurYldz/headerproof \
-  --signer-workflow TayfurYldz/headerproof/.github/workflows/release.yml
+  -R tayfuryldz/headerproof \
+  --signer-workflow tayfuryldz/headerproof/.github/workflows/release.yml
 ```
 
 Verify the container:
 
 ```bash
 gh attestation verify oci://ghcr.io/tayfuryldz/headerproof:vX.Y.Z \
-  -R TayfurYldz/headerproof \
-  --signer-workflow TayfurYldz/headerproof/.github/workflows/release.yml
+  -R tayfuryldz/headerproof \
+  --signer-workflow tayfuryldz/headerproof/.github/workflows/release.yml
 ```
 
 For older releases that predate GitHub release-artifact attestations, use the
