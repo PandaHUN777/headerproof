@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.2
+
+- Changed the default evidence root to `${XDG_STATE_HOME:-~/.local/state}/headerproof/runs/` so the installed command works from any directory without colliding with root-owned project folders.
+- Added a regression test for the user-writable XDG state path.
+
 ## 1.3.1
 
 - Fixed the refactor regression that serialized every baseline and probe exchange as `null`.

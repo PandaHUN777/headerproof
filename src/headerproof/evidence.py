@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from .constants import CONFIDENCE_ORDER, SCHEMA_VERSION, SEVERITY_ORDER, SUPPRESSED_BY_STRICT
-from .models import EvidenceAssessment, EvidenceState, HttpSnapshot, TechnicalGate
+from .models import EvidenceAssessment, EvidenceState, HttpSnapshot
+from .templates import evaluate_gate, get_template
 from .transport import snapshot_summary
 
 
@@ -57,6 +58,15 @@ def evidence_locations(evidence: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def verification_template(signal_type: str) -> dict[str, list[str] | str]:
+    template = get_template(signal_type)
+    if template is not None:
+        verification = template.get("verification", {})
+        return {
+            "objective": str(verification.get("objective", "Validate the technical observation independently.")),
+            "automated_checks": list(verification.get("automated_checks", [])),
+            "manual_confirmation": list(verification.get("manual_confirmation", [])),
+            "report_gate": str(verification.get("report_gate", "Require independent impact validation.")),
+        }
     if signal_type.startswith("cors_"):
         return {
             "objective": "Prove a browser can read sensitive cross-origin data, not merely that CORS headers are loose.",
@@ -145,118 +155,53 @@ def verification_template(signal_type: str) -> dict[str, list[str] | str]:
 
 
 def assess_signal(signal: dict[str, Any]) -> EvidenceAssessment:
-    signal_type = signal.get("type", "")
+    signal_type = str(signal.get("type", ""))
     evidence = signal.get("evidence", {})
+    if not isinstance(evidence, dict):
+        evidence = {}
     status = response_status_from_signal(signal)
-    state: EvidenceState = "observed"
-    technical_gate: TechnicalGate = "failed"
-    reasons: list[str] = []
-    missing: list[str] = []
-    gate_checks: dict[str, bool] = {
+    template = get_template(signal_type)
+    if template is None:
+        return {
+            "state": "observed",
+            "technical_gate": "failed",
+            "impact": "unverified",
+            "reasons": [f"HTTP {status} response was recorded"] if status is not None else [],
+            "missing_proof": ["no evidence-gate template is defined for this signal type"],
+            "gate_checks": {
+                "response_recorded": status is not None,
+                "transport_succeeded": status is not None,
+            },
+        }
+
+    context = {"status": status, "evidence": evidence, "signal": signal}
+    passed, configured_checks = evaluate_gate(template, context)
+    assessment_spec = template["assessment"]
+    default_state = str(assessment_spec.get("default_state", "observed"))
+    state = cast(EvidenceState, str(assessment_spec.get("passed_state", default_state)) if passed else default_state)
+    reasons = list(
+        assessment_spec.get("passed_reasons", assessment_spec.get("reasons", []))
+        if passed
+        else assessment_spec.get("reasons", [])
+    )
+    missing = list(
+        assessment_spec.get("passed_missing_proof", assessment_spec.get("missing_proof", []))
+        if passed
+        else assessment_spec.get("missing_proof", [])
+    )
+    if status is not None:
+        reasons.insert(0, f"HTTP {status} response was recorded")
+    elif "probe response was not recorded" not in missing:
+        missing.insert(0, "probe response was not recorded")
+
+    gate_checks = {
         "response_recorded": status is not None,
         "transport_succeeded": status is not None,
+        **configured_checks,
     }
-
-    if status is not None:
-        reasons.append(f"HTTP {status} response was recorded")
-    else:
-        missing.append("probe response was not recorded")
-
-    if signal_type == "cors_arbitrary_origin_with_credentials":
-        reasons.extend(["exact Origin reflected", "Access-Control-Allow-Credentials is true"])
-        gate_checks["exact_origin_reflected"] = True
-        gate_checks["credentials_enabled"] = True
-        missing.append("authenticated sensitive body read is not proven by header scan")
-    elif signal_type == "cors_arbitrary_origin_reflection":
-        reasons.append("exact Origin reflected in ACAO")
-        gate_checks["exact_origin_reflected"] = True
-        missing.append("credentials or sensitive readable data not proven")
-    elif signal_type == "cors_wildcard_origin":
-        reasons.append("wildcard ACAO observed")
-        gate_checks["wildcard_origin_observed"] = True
-        missing.append("wildcard CORS alone is normally not reportable")
-    elif signal_type == "cors_cache_poisoning_candidate":
-        reasons.extend(["reflected Origin on cacheable response", "Vary: Origin missing"])
-        gate_checks["cache_candidate"] = True
-        missing.append("second-client poisoned response not proven")
-    elif signal_type == "csrf_cookie_samesite_missing":
-        reasons.append("SameSite missing on Set-Cookie")
-        gate_checks["likely_auth_cookie"] = bool(evidence.get("likely_auth_cookie"))
-        missing.append("no cross-site state-changing request or read-back proof")
-    elif signal_type == "csrf_cookie_cross_site_auth":
-        reasons.append("likely auth cookie permits cross-site delivery")
-        gate_checks["likely_auth_cookie"] = True
-        missing.append("CSRF token/origin enforcement and state change not tested")
-    elif signal_type == "csrf_cookie_auth_unsafe_methods_exposed":
-        reasons.extend(["likely auth cookie present", "unsafe methods advertised"])
-        gate_checks["unsafe_methods_advertised"] = True
-        missing.append("browser-delivered exploit and separate read-back not proven")
-    elif signal_type == "cookie_samesite_none_without_secure":
-        reasons.append("cookie attribute hardening issue")
-        gate_checks["cookie_attribute_observed"] = True
-        missing.append("no exploitable session or CSRF impact proven")
-    elif signal_type == "header_poisoning_candidate":
-        reasons.append("canary reached security-relevant response header")
-        gate_checks["security_header_reflection"] = True
-        missing.append("victim-observable impact not independently proven")
-    elif signal_type == "header_reflection_candidate":
-        reasons.append("canary reached response header")
-        gate_checks["header_reflection"] = True
-        missing.append("plain reflection does not prove header control or splitting")
-    elif signal_type == "header_based_content_spoofing":
-        reasons.append("header canary reached textual response body")
-        gate_checks["body_reflection"] = True
-        missing.append("trusted victim-visible spoofing or cache impact not proven")
-    elif signal_type == "unkeyed_header_cache_poisoning_candidate":
-        reasons.extend(["header canary reflected", "response has cache indicators"])
-        gate_checks["cache_candidate"] = True
-        missing.append("clean second-client cached response not proven")
-    elif signal_type in {
-        "cache_poisoning_cross_request_reproduction",
-        "cache_poisoning_shared_cache_confirmed",
-    }:
-        state = "reproduced"
-        required_checks = evidence.get("state_machine_checks", {})
-        if isinstance(required_checks, dict):
-            gate_checks.update({str(key): bool(value) for key, value in required_checks.items()})
-        if evidence.get("shared_cache_confirmed"):
-            state = "cross_request_confirmed"
-            technical_gate = "passed"
-            reasons.extend(
-                [
-                    "poison request contained canary",
-                    "clean follow-up response contained canary",
-                    "all four cache-state requests completed in isolated client contexts",
-                    "clean victim response included shared-cache progression evidence",
-                ]
-            )
-            missing.append("real victim impact remains unverified; validate on an authorized low-traffic path")
-        else:
-            reasons.extend(["poison request contained canary", "clean follow-up response contained canary"])
-            missing.append("the complete shared-cache state-machine gate did not pass")
-    elif signal_type == "query_parameter_content_reflection":
-        reasons.append("query canary reflected in textual body")
-        gate_checks["body_reflection"] = True
-        missing.append("plain reflection lacks trusted-context, cache, or script impact")
-    elif signal_type == "query_parameter_header_reflection":
-        reasons.append("query canary reached response header")
-        gate_checks["header_reflection"] = True
-        missing.append("arbitrary header setting or response splitting not proven")
-    elif signal_type == "response_splitting_crlf_candidate":
-        exact_header = bool(evidence.get("injected_header_seen"))
-        gate_checks["exact_canary_parsed_as_header"] = exact_header
-        if exact_header and status is not None:
-            state = "reproduced"
-            technical_gate = "passed"
-            reasons.append("CRLF probe produced a parsed response header")
-            missing.append("real victim impact remains unverified")
-        else:
-            reasons.append("CRLF canary reflected but parsed injected header not observed")
-            missing.append("parsed arbitrary header not proven")
-
     return {
         "state": state,
-        "technical_gate": technical_gate,
+        "technical_gate": "passed" if passed else "failed",
         "impact": "unverified",
         "reasons": reasons,
         "missing_proof": missing,

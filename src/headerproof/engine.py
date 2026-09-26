@@ -15,6 +15,7 @@ from .detectors import (
     analyze_crlf_probe,
     analyze_csrf,
     analyze_header_probe,
+    analyze_oob_header_probe,
     canary_locations,
     default_header_probe_names,
     default_origin_variants,
@@ -23,6 +24,7 @@ from .detectors import (
 from .evidence import signal_passes_fp_filter
 from .input import add_query, add_raw_query
 from .models import HttpSnapshot, ProbeState
+from .oob import callback_host, new_oob_token, wait_for_event
 from .transport import HttpClient, UrlBudget, snapshot_summary
 from .ui import emit_live_alert
 
@@ -113,6 +115,9 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
             args.delay,
         )
         context = client_context or f"{probe_id or role}-{coverage_sequence}"
+        rate_limiter = getattr(args, "rate_limiter", None)
+        if rate_limiter is not None:
+            rate_limiter.wait(request_url)
         semaphore = getattr(args, "request_semaphore", None)
         if semaphore is None:
             snap = active_client.fetch(
@@ -212,6 +217,12 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
             }
             if not signal_passes_fp_filter(signal, args.fp_mode):
                 observation["filter_reason"] = "technical_evidence_gate_not_met"
+                result["observations"].append(observation)
+                result["filtered_signals"] += 1
+                continue
+            severity_filter: set[str] = set(getattr(args, "severity_filter", set()))
+            if severity_filter and signal.get("severity", "info") not in severity_filter:
+                observation["filter_reason"] = "severity_filtered"
                 result["observations"].append(observation)
                 result["filtered_signals"] += 1
                 continue
@@ -428,8 +439,11 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
     if {"header-injection", "cache-poisoning", "content-spoofing"} & checks:
         for header_name in default_header_probe_names(args.header, args.header_probe_limit):
             probe_id = new_probe_id("header")
-            canary = new_canary()
-            header_value = header_probe_value(header_name, canary)
+            oob_capable = header_name.lower() in {"x-forwarded-host", "x-host", "x-forwarded-server", "forwarded"}
+            oob_enabled = bool(args.oob_api and args.oob_domain and oob_capable)
+            canary = new_oob_token() if oob_enabled else new_canary()
+            oob_host = callback_host(canary, args.oob_domain) if oob_enabled else ""
+            header_value = header_probe_value(header_name, canary, oob_host)
             cache_url = add_query(url, {"pa_cb": probe_id})
             control_url = add_query(url, {"pa_cb": f"{probe_id}-control"})
             cache_confirmation = "cache-poisoning" in checks and not args.no_cache_confirm
@@ -462,6 +476,7 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
                 victim_sequence: int = victim_sequence,
                 control_sequence: int = control_sequence,
                 cache_confirmation: bool = cache_confirmation,
+                oob_enabled: bool = oob_enabled,
             ) -> list[dict[str, Any]]:
                 clean_before = None
                 if cache_confirmation:
@@ -510,7 +525,21 @@ def scan_url(url: str, args: argparse.Namespace) -> dict[str, Any]:
                 elif cache_confirmation:
                     coverage.transition(victim_sequence, "skipped", reason="poison_response_did_not_reflect_canary")
                     coverage.transition(control_sequence, "skipped", reason="poison_response_did_not_reflect_canary")
-                return analyze_header_probe(header_name, canary, probe_id, clean_before, probe, victim, control, save_body)
+
+                found = analyze_header_probe(
+                    header_name,
+                    canary,
+                    probe_id,
+                    clean_before,
+                    probe,
+                    victim,
+                    control,
+                    save_body,
+                )
+                if oob_enabled and budget.remaining() > 0:
+                    events = wait_for_event(args.oob_api, canary, timeout=min(args.oob_wait, budget.remaining()))
+                    found.extend(analyze_oob_header_probe(header_name, canary, events, probe, save_body))
+                return found
 
             add_task(f"header:{header_name}", "header-injection", header_task)
 

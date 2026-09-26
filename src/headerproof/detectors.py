@@ -371,13 +371,45 @@ def default_header_probe_names(custom_headers: list[str], limit: int) -> list[st
     return probes
 
 
-def header_probe_value(header_name: str, canary: str) -> str:
+def header_probe_value(header_name: str, canary: str, host_override: str = "") -> str:
     name = header_name.lower()
+    host = host_override or f"{canary}.invalid"
     if name == "forwarded":
-        return f"for=192.0.2.1;host={canary}.invalid;proto=https"
+        return f"for=192.0.2.1;host={host};proto=https"
     if name in {"x-original-url", "x-rewrite-url", "x-forwarded-prefix"}:
         return f"/{canary}"
-    return f"{canary}.invalid"
+    return host
+
+
+def analyze_oob_header_probe(
+    header_name: str,
+    token: str,
+    events: list[dict[str, Any]],
+    probe: HttpSnapshot,
+    save_body: bool,
+) -> list[dict[str, Any]]:
+    if not events:
+        return []
+    protocols = sorted({str(item.get("protocol", "unknown")) for item in events})
+    return [
+        make_signal(
+            "header-injection",
+            "blind_header_oob_confirmed",
+            "high",
+            "high",
+            "Header probe produced an out-of-band callback",
+            {
+                "probe_header": header_name,
+                "oob_token": token,
+                "oob_confirmed": True,
+                "protocols": protocols,
+                "event_count": len(events),
+            },
+            probe,
+            "Confirm the callback is attributable to the tested request and document the backend interaction.",
+            save_body,
+        )
+    ]
 
 
 def analyze_header_probe(

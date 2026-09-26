@@ -14,3 +14,4 @@ evidence/
 .env
 .venv/
 venv/
+dist-bin/

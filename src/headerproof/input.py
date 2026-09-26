@@ -46,6 +46,23 @@ def url_fingerprint(url: str) -> int:
     return int.from_bytes(hashlib.blake2b(url.encode("utf-8"), digest_size=8).digest(), "big")
 
 
+def iter_url_lines(lines: Iterator[str], max_urls: int | None = None) -> Iterator[str]:
+    seen: set[int] = set()
+    count = 0
+    for line in lines:
+        url = normalise_url(line)
+        if not url:
+            continue
+        fingerprint = url_fingerprint(url)
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        yield url
+        count += 1
+        if max_urls and count >= max_urls:
+            break
+
+
 def iter_urls(
     path: Path,
     max_urls: int | None = None,

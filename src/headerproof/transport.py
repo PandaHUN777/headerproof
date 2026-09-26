@@ -4,9 +4,10 @@ import hashlib
 import re
 import socket
 import ssl
+import threading
 import time
 from typing import Any, Protocol
-from urllib import error, request
+from urllib import error, parse, request
 
 from .constants import VERSION
 from .models import ExchangeEvidence, HttpSnapshot
@@ -19,6 +20,29 @@ class ReadableBody(Protocol):
 class NoRedirectHandler(request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
         return None
+
+
+class HostRateLimiter:
+    """Thread-safe per-host request pacing."""
+
+    def __init__(self, requests_per_second: float) -> None:
+        self.interval = 0.0 if requests_per_second <= 0 else 1.0 / requests_per_second
+        self._lock = threading.Lock()
+        self._next_allowed: dict[str, float] = {}
+
+    def wait(self, url: str) -> None:
+        if self.interval <= 0:
+            return
+        host = (parse.urlsplit(url).hostname or "").lower()
+        if not host:
+            return
+        with self._lock:
+            now = time.monotonic()
+            ready = self._next_allowed.get(host, now)
+            delay = max(0.0, ready - now)
+            self._next_allowed[host] = max(now, ready) + self.interval
+        if delay > 0:
+            time.sleep(delay)
 
 
 class UrlBudget:

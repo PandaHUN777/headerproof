@@ -12,10 +12,16 @@ from .constants import PRODUCT_NAME, SEVERITY_ORDER, VERSION
 from .evidence import verification_template
 from .file_safety import atomic_write_text
 from .metadata import current_git_commit
-from .ui import shorten, ui_box, ui_kv
+from .ui import shorten
 
 STATE_ORDER = {"observed": 1, "reproduced": 2, "cross_request_confirmed": 3}
 JSONL_NAMES = ("results", "signals", "observations", "probes", "coverage", "errors")
+
+
+def default_output_root() -> Path:
+    state_home = os.environ.get("XDG_STATE_HOME")
+    base = Path(state_home).expanduser() if state_home else Path.home() / ".local" / "state"
+    return base / "headerproof" / "runs"
 
 
 def reserve_output_dir(requested: Path | None = None) -> Path:
@@ -26,7 +32,7 @@ def reserve_output_dir(requested: Path | None = None) -> Path:
         out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir
 
-    root = Path("evidence")
+    root = default_output_root()
     root.mkdir(parents=True, exist_ok=True)
     stem = f"headerproof-{datetime.now():%Y%m%d-%H%M%S-%f}"
     out_dir = root / stem
@@ -174,7 +180,6 @@ def write_summary(
         f"- tool: {metadata.get('tool', PRODUCT_NAME)} {metadata.get('version', VERSION)}",
         f"- git_commit: {metadata.get('git_commit') or 'unknown'}",
         f"- command: {' '.join(str(item) for item in metadata.get('command', [])) or 'unknown'}",
-        f"- profile: {metadata.get('config', {}).get('profile', 'unknown')}",
         f"- urls: {payload['urls']}",
         f"- scanned: {payload['scanned']}",
         f"- partial_error: {payload['partial_error']}",
@@ -278,6 +283,95 @@ def payload_from_results(results: list[dict[str, Any]], out_dir: Path) -> dict[s
     }
 
 
+
+def sarif_payload(findings: list[dict[str, Any]]) -> dict[str, Any]:
+    rules: dict[str, dict[str, Any]] = {}
+    results: list[dict[str, Any]] = []
+    level_map = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}
+    for finding in findings:
+        rule_id = str(finding.get("type", "headerproof-finding"))
+        rules.setdefault(
+            rule_id,
+            {
+                "id": rule_id,
+                "name": rule_id,
+                "shortDescription": {"text": str(finding.get("title", rule_id))},
+                "properties": {
+                    "security-severity": str(SEVERITY_ORDER.get(str(finding.get("severity", "info")), 1)),
+                    "tags": ["security", str(finding.get("check", "headerproof"))],
+                },
+            },
+        )
+        url = str(finding.get("url", ""))
+        state = str(finding.get("assessment", {}).get("state", "unverified"))
+        results.append(
+            {
+                "ruleId": rule_id,
+                "level": level_map.get(str(finding.get("severity", "info")), "note"),
+                "message": {"text": f"{finding.get('title', rule_id)}; evidence_state={state}"},
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": url},
+                        }
+                    }
+                ],
+                "properties": {
+                    "severity": finding.get("severity", "info"),
+                    "confidence": finding.get("confidence", "low"),
+                    "evidence_state": state,
+                },
+            }
+        )
+    return {
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": PRODUCT_NAME,
+                        "version": VERSION,
+                        "informationUri": "https://github.com/TayfurYldz/headerproof",
+                        "rules": list(rules.values()),
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
+
+def read_findings(out_dir: Path) -> list[dict[str, Any]]:
+    lines = (out_dir / "signals.jsonl").read_text(encoding="utf-8").splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+def export_findings(out_dir: Path, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    findings = read_findings(out_dir)
+    suffix = output_path.suffix.lower()
+    if suffix == ".jsonl":
+        content = "\n".join(json.dumps(item, sort_keys=True) for item in findings)
+        atomic_write_text(output_path, content + ("\n" if content else ""))
+        return
+    if suffix == ".json":
+        atomic_write_text(output_path, json.dumps(findings, indent=2, sort_keys=True) + "\n")
+        return
+    if suffix == ".sarif":
+        atomic_write_text(output_path, json.dumps(sarif_payload(findings), indent=2, sort_keys=True) + "\n")
+        return
+    if suffix == ".md":
+        rows = ["# HeaderProof Findings", "", "| Type | Severity | State | URL |", "|---|---|---|---|"]
+        for item in findings:
+            state = item.get("assessment", {}).get("state", "unverified")
+            rows.append(
+                f"| {item.get('type', '')} | {item.get('severity', '')} | {state} | {item.get('url', '')} |"
+            )
+        atomic_write_text(output_path, "\n".join(rows) + "\n")
+        return
+    raise ValueError(f"unsupported output format: {suffix}")
+
+
 def print_console_summary(
     results_or_payload: list[dict[str, Any]] | dict[str, Any],
     out_dir: Path,
@@ -289,44 +383,12 @@ def print_console_summary(
         else results_or_payload
     )
     if as_json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
         return
-    lines = [
-        ui_kv("URLs", payload["urls"]),
-        ui_kv("Scanned", payload["scanned"]),
-        ui_kv("Partial error", payload["partial_error"]),
-        ui_kv("Partial timeout", payload["partial_timeout"]),
-        ui_kv("Error", payload["error"]),
-        ui_kv("Verified signals", payload["verified_technical_signals"]),
-        ui_kv("Suppressed", payload["filtered_signals"]),
-        ui_kv("Duplicates", payload["duplicate_signals"]),
-        ui_kv("Error events", payload["error_events"]),
-        ui_kv("Severity", payload["by_severity"] or "none"),
-    ]
-    if payload["by_evidence_state"]:
-        lines.append(
-            ui_kv(
-                "Evidence state",
-                ", ".join(f"{name}={count}" for name, count in payload["by_evidence_state"].items()),
-            )
-        )
-    if payload["by_type"]:
-        lines.append(
-            ui_kv("Types", ", ".join(f"{name}={count}" for name, count in payload["by_type"].items()))
-        )
-    lines.extend(
-        [
-            ui_kv("Evidence", out_dir),
-            ui_kv(
-                "Files",
-                "metadata, results, observations, probes, coverage, errors, signals, checkpoint, summary",
-            ),
-            "",
-            (
-                "Verified technical signals require manual victim-impact validation."
-                if payload["verified_technical_signals"]
-                else "No signal passed its technical evidence gate."
-            ),
-        ]
+    print(
+        "headerproof: "
+        f"urls={payload['urls']} scanned={payload['scanned']} "
+        f"findings={payload['verified_technical_signals']} suppressed={payload['filtered_signals']} "
+        f"errors={payload['error']} evidence={out_dir}",
+        file=sys.stderr,
     )
-    ui_box("SCAN COMPLETE · EVIDENCE-FIRST RESULTS", lines, stream=sys.stdout)

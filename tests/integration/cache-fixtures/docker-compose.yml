@@ -1,0 +1,23 @@
+services:
+  origin:
+    image: nginx:1.28-alpine
+    ports:
+      - "18080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 2s
+      timeout: 1s
+      retries: 20
+
+  varnish:
+    image: varnish:7.7-alpine
+    depends_on:
+      origin:
+        condition: service_healthy
+    ports:
+      - "16080:80"
+    volumes:
+      - ./varnish/default.vcl:/etc/varnish/default.vcl:ro
+    command: ["varnishd", "-F", "-f", "/etc/varnish/default.vcl", "-a", ":80", "-s", "malloc,64m"]
