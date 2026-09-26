@@ -15,3 +15,23 @@ evidence/
 .venv/
 venv/
 dist-bin/
+
+# Local IDE / agent workspaces
+.idea/
+.vscode/
+.claude/
+.codex/
+.agents/
+.antigravity/
+.DS_Store
+
+# Local credentials / key material
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local scanner state
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
