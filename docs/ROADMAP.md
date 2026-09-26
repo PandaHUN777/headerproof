@@ -33,13 +33,15 @@ Implemented:
 - Real Varnish and nginx cache fixtures.
 - Reproducible controlled cache measurements with provider-specific cache-hit semantics.
 - Cloudflare/Fastly fixture inputs with provider-fingerprint validation so an arbitrary endpoint cannot be mislabeled as a CDN measurement.
+- Reproducible real-provider fixtures: Cloudflare Workers temporary deployments and Fastly Fiddle ephemeral VCL services.
 - Authorized known-vulnerable-lab recall harness plus an isolated official DVWA low-CSRF measurement in CI.
 
 Measured controlled cache corpus on 2026-09-26: TP=2, TN=4, FP=0, FN=0, precision=1.0, recall=1.0.
 Measured DVWA low-CSRF case on 2026-09-26: expected=1, detected=0, FN=1, detection recall=0.0. The existing SameSite observation is not credited as proof of the missing form token.
+Measured Cloudflare Workers temporary fixture on 2026-09-26: TP=0, TN=2, FP=0, FN=1, precision=0.0, recall=0.0.
+Measured Fastly Fiddle real-edge fixture on 2026-09-26: TP=0, TN=2, FP=0, FN=1, precision=0.0, recall=0.0.
 
-Remaining:
-- Run and publish measurements for controlled Cloudflare and Fastly endpoints. The harness is ready, but no controlled provider endpoints or credentials are configured in this repository.
+Phase 3 is complete as a validation phase: all requested provider/lab measurements now have reproducible harnesses and published results. The two external-CDN false negatives are retained as measured limitations rather than converted into unsupported confirmations.
 
 ### Phase 4 — Distribution
 Implemented:

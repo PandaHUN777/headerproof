@@ -24,7 +24,11 @@ The CI cache corpus runs the same vulnerable, keyed-safe, and `no-store` cases t
 
 On 2026-09-26 the six-case corpus produced: TP=2, TN=4, FP=0, FN=0, precision=1.0, recall=1.0. These numbers describe only this controlled cache corpus; they are not a claim about arbitrary internet targets.
 
-Cloudflare and Fastly endpoints are supported by the integration harness through `HEADERPROOF_CLOUDFLARE_FIXTURE` and `HEADERPROOF_FASTLY_FIXTURE`, or the matching manual CI inputs. External CDN measurements are rejected unless provider-specific response headers verify that the endpoint is actually traversing the named CDN. No Cloudflare/Fastly precision number is published until controlled endpoints are configured.
+Cloudflare and Fastly endpoints are supported by the integration harness through `HEADERPROOF_CLOUDFLARE_FIXTURE` and `HEADERPROOF_FASTLY_FIXTURE`, or the matching manual CI inputs. External CDN measurements are rejected unless provider-specific response headers verify that the endpoint is actually traversing the named CDN.
+
+The repository includes two ephemeral real-provider fixtures under `tests/integration/provider-fixtures/`: a Cloudflare Worker configured with Workers Cache and a Fastly Fiddle VCL fixture. Cloudflare can be deployed with Wrangler's temporary preview account, so no persistent account credential is required. Fastly Fiddle provisions an ephemeral real-edge service without a Fastly account and the helper prints its execution base URL.
+
+Measured on 2026-09-26, each external provider corpus contained one intentionally vulnerable case and two negative controls. Cloudflare: TP=0, TN=2, FP=0, FN=1, precision=0.0, recall=0.0. Fastly: TP=0, TN=2, FP=0, FN=1, precision=0.0, recall=0.0. These are deliberately published as false negatives because HeaderProof did not satisfy its shared-cache proof gate on the provider-backed vulnerable cases. Provider identity was verified from `CF-Ray` + `CF-Cache-Status` for Cloudflare and `X-Served-By` + `X-Cache` for Fastly.
 
 Provider cache-hit semantics are interpreted independently. Fastly multi-node `X-Cache` values count any `HIT` component as cache-served evidence; Cloudflare `HIT`, `STALE`, `UPDATING`, and `REVALIDATED` are cache-served/validated states, while `MISS`, `BYPASS`, `DYNAMIC`, and `EXPIRED` are not promoted as hit evidence.
 
