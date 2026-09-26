@@ -69,3 +69,10 @@ def test_ci_uses_current_unified_attestation_action() -> None:
     text = (WORKFLOWS / "ci.yml").read_text()
     assert "uses: actions/attest@" in text
     assert "actions/attest-build-provenance@" not in text
+
+
+def test_release_binary_job_runs_release_smoke_contract() -> None:
+    text = (WORKFLOWS / "release.yml").read_text()
+    binary_job = text.split("\n  binary:\n", 1)[1].split("\n  python-dist:\n", 1)[0]
+    assert "Smoke test" in binary_job
+    assert 'python tests/release_smoke.py "$FILE"' in binary_job
