@@ -8,7 +8,7 @@ Security fixes target `main` and the latest published release line. Older releas
 
 ## Vulnerabilities in HeaderProof
 
-If you find a vulnerability in HeaderProof itself, use GitHub's private vulnerability reporting for this repository. Do not open a public issue before coordinated disclosure.
+If you find a vulnerability in HeaderProof itself, use [GitHub private vulnerability reporting](https://github.com/TayfurYldz/headerproof/security/advisories/new). Do not open a public issue before coordinated disclosure.
 
 Include the affected version or commit, impact, minimal reproduction, and any proposed mitigation. Remove third-party secrets and target data.
 

@@ -83,6 +83,7 @@ def test_community_contract_routes_work_and_security_to_the_right_channels() -> 
     assert "A Discussion becomes an issue only when" in maintainers
     assert "Issues are for reproducible defects and accepted, scoped work" in support
     assert "private vulnerability reporting" in security
+    assert "security/advisories/new" in security
     assert "third-party systems" in security
     assert "Critique code, evidence, and design decisions rather than people" in conduct
 
