@@ -100,17 +100,19 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "$GITHUB_REF_NAME"
-          release/* python-dist/*
-          --verify-tag
-          --generate-notes
-          --title "HeaderProof $GITHUB_REF_NAME"
+        run: |
+          NOTES="docs/releases/${GITHUB_REF_NAME}.md"
+          test -s "$NOTES"
+          gh release create "$GITHUB_REF_NAME" \
+            release/* python-dist/* \
+            --verify-tag \
+            --notes-file "$NOTES" \
+            --title "HeaderProof $GITHUB_REF_NAME"
 
 
   pypi:
     name: Publish PyPI
-    needs: python-dist
+    needs: [python-dist, github-release]
     runs-on: ubuntu-latest
     environment:
       name: pypi

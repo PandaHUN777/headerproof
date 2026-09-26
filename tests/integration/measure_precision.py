@@ -24,6 +24,7 @@ def confirmed(base: str, path: str) -> bool:
     args.per_url_concurrency = 1
     args.concurrency = 1
     args.url_timeout = 9.0
+    args.no_live_alerts = True
     result = scan_url(args.target, args)
     return any(item.get("type") == "cache_poisoning_shared_cache_confirmed" for item in result["signals"])
 
