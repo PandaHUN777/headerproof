@@ -43,6 +43,8 @@ def test_review_integrity_requires_real_validation_not_generated_claims() -> Non
     assert "strengthens provenance, not correctness" in maintainers
     assert "Do not invent test results" in contributing
     assert "Signed commits that GitHub can mark `Verified` are encouraged" in contributing
+    assert "`in progress`: accepted work currently has an active pull request" in maintainers
+    assert "restore the appropriate discovery label after re-triage" in maintainers
     assert "commands you actually ran" in pr_template
     assert "no results or evidence were fabricated" in pr_template
 
